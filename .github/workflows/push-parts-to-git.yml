@@ -54,12 +54,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
+          trap 'echo "ERR line=$LINENO cmd=$BASH_COMMAND" >> /tmp/trace.log' ERR
           mkdir -p /tmp/sub
           gh release download "${{ github.event.inputs.release_tag }}" -R "${{ github.repository }}" -D /tmp/sub -p "submission.zip.part.*"
-          ls -lh /tmp/sub
-          echo "== structural magic check =="
-          echo -n "part.00 head: "; head -c 4 /tmp/sub/submission.zip.part.00 | od -An -tx1
-          echo -n "part.01 tail EOCD: "; tail -c 66000 /tmp/sub/submission.zip.part.01 | grep -aob $'PK\x05\x06' | tail -n 2 || echo "NOT FOUND"
+          ls -la /tmp/sub | tee -a /tmp/trace.log
+          for f in /tmp/sub/submission.zip.part.*; do
+            echo "$f $(stat -c%s "$f")" | tee -a /tmp/trace.log
+          done
 
       - name: Combine, verify CRC, split into <100MiB chunks
         if: steps.guard.outputs.skip != 'true'
@@ -67,27 +68,39 @@ jobs:
           CHUNK_MB: ${{ github.event.inputs.chunk_mb }}
         run: |
           set -e
+          trap 'echo "ERR line=$LINENO cmd=$BASH_COMMAND" >> /tmp/trace.log' ERR
+          exec > >(tee -a /tmp/trace.log) 2>&1
+
+          echo "== phase 1: combine =="
           cd /tmp/sub
           mkdir -p "$GITHUB_WORKSPACE/submission_parts"
-          cat submission.zip.part.00 submission.zip.part.01 > submission.zip
-          rm -f submission.zip.part.00 submission.zip.part.01
-          echo "== zip CRC + listing (python zipfile) =="
-          TARGET_DIR="$GITHUB_WORKSPACE/submission_parts" python3 - <<'PY'
-          import os, zipfile, hashlib
+          cat submission.zip.part.0* > submission.zip
+          rm -f submission.zip.part.0*
+          ls -la /tmp/sub
+
+          echo "== phase 2: verify zip (CRC + listing + md5) =="
+          TARGET_DIR="$GITHUB_WORKSPACE/submission_parts" python3 - <<'PYEOF'
+          import os, zipfile, hashlib, sys
           target = os.environ['TARGET_DIR']
-          z = zipfile.ZipFile('submission.zip')
-          names = z.namelist()
-          print(f"{len(names)} entries")
-          lines = []
-          for n in names:
-              i = z.getinfo(n)
-              lines.append(f"{i.file_size:12d}  {n}")
-          open(os.path.join(target, 'zip_listing.txt'), 'w').write("\n".join(lines) + "\n")
-          for l in lines[:40]:
-              print(l)
-          bad = z.testzip()
-          print("CRC:", "OK" if bad is None else f"BAD {bad}")
-          assert bad is None, f"CRC failed on {bad}"
+          try:
+              z = zipfile.ZipFile('submission.zip')
+              names = z.namelist()
+              print(f"{len(names)} entries")
+              lines = []
+              for n in names:
+                  i = z.getinfo(n)
+                  lines.append(f"{i.file_size:12d}  {n}")
+              open(os.path.join(target, 'zip_listing.txt'), 'w').write("\n".join(lines) + "\n")
+              for l in lines[:40]:
+                  print(l)
+              bad = z.testzip()
+              print("CRC:", "OK" if bad is None else f"BAD {bad}")
+              if bad is not None:
+                  print("CRC FAILED on", bad)
+                  sys.exit(2)
+          except zipfile.BadZipFile as e:
+              print("BadZipFile:", e)
+              sys.exit(3)
           h = hashlib.md5()
           with open('submission.zip', 'rb') as f:
               for chunk in iter(lambda: f.read(1 << 24), b''):
@@ -95,82 +108,79 @@ jobs:
           md5 = h.hexdigest()
           print("ZIP_MD5", md5)
           open(os.path.join(target, 'zip_md5.txt'), 'w').write(md5 + "\n")
-          PY
-          echo "== split -b ${CHUNK_MB}M =="
-          mkdir -p "$GITHUB_WORKSPACE/submission_parts"
+          PYEOF
+
+          echo "== phase 3: split into ${CHUNK_MB}M chunks =="
           split -b "${CHUNK_MB}M" -d -a 2 submission.zip "$GITHUB_WORKSPACE/submission_parts/part_"
-          rm -f submission.zip
+          rm -f /tmp/sub/submission.zip
           cd "$GITHUB_WORKSPACE/submission_parts"
-          echo "== chunks =="
-          ls -l part_* | head -n 50
-          md5sum part_* > chunk_md5.txt
-          cat chunk_md5.txt
+          ls -la part_*
 
-          echo "== generate MANIFEST + reassemble scripts =="
-          {
-            echo "# submission.zip — сборка из частей"
-            echo
-            echo "Сборка \`submission.zip\` из чанков \`part_00..part_N\` (каждый < 100 МиБ, лимит GitHub на файл)."
-            echo
-            echo "## Быстрая сборка"
-            echo
-            echo '```bat'
-            echo ':: Windows (CMD), из папки submission_parts:'
-            echo 'reassemble.bat'
-            echo
-            echo ':: Linux / macOS / Git Bash:'
-            echo './reassemble.sh'
-            echo '```'
-            echo
-            echo '```bash'
-            echo '# или вручную:'
-            echo 'cat submission_parts/part_* > submission.zip'
-            echo 'md5sum -c <(grep -v part_ submission_parts/MANIFEST.md | sed -n "s/.*ZIP_MD5 \`\\([a-f0-9]*\\)\`.*/\\1  submission.zip/p")  # опционально'
-            echo '```'
-            echo
-            echo "## Контрольные суммы"
-            echo
-            echo "ZIP_MD5 \`$(cat zip_md5.txt 2>/dev/null || echo unknown)\`"
-            echo
-            echo '### Чанки (md5)'
-            echo
-            echo '```'
-            cat chunk_md5.txt 2>/dev/null || echo "(chunk_md5.txt missing)"
-            echo '```'
-            echo
-            echo "## Содержимое submission.zip"
-            echo
-            echo '```'
-            head -n 60 zip_listing.txt 2>/dev/null || echo "(zip_listing.txt missing)"
-            echo '```'
-            echo
-            echo "Полный листинг: [zip_listing.txt](zip_listing.txt)"
-          } > MANIFEST.md
+          echo "== phase 4: manifest + scripts (python) =="
+          python3 - <<'PYEOF'
+          import os, hashlib, glob, stat
+          d = os.getcwd()
+          chunks = sorted(glob.glob(os.path.join(d, 'part_*')))
+          print(f"{len(chunks)} chunks")
+          chunk_lines = []
+          total = 0
+          for c in chunks:
+              h = hashlib.md5()
+              size = 0
+              with open(c, 'rb') as f:
+                  for blk in iter(lambda: f.read(1 << 24), b''):
+                      h.update(blk)
+                      size += len(blk)
+              total += size
+              chunk_lines.append(f"{h.hexdigest()}  {os.path.basename(c)}")
+              print(os.path.basename(c), size)
+          open(os.path.join(d, 'chunk_md5.txt'), 'w').write("\n".join(chunk_lines) + "\n")
+          zip_md5 = open(os.path.join(d, 'zip_md5.txt')).read().strip() if os.path.exists(os.path.join(d, 'zip_md5.txt')) else 'unknown'
+          listing = open(os.path.join(d, 'zip_listing.txt')).read() if os.path.exists(os.path.join(d, 'zip_listing.txt')) else '(missing)'
+          names = [os.path.basename(c) for c in chunks]
 
-          {
-            echo "@echo off"
-            echo "cd /d %~dp0"
-            printf 'copy /b '
-            ls part_* | sort | paste -sd+ -
-            echo " ..\\submission.zip"
-            echo "echo Done. ..\\submission.zip"
-          } > reassemble.bat
+          bat = ["@echo off", "cd /d %~dp0", "copy /b " + "+".join(names) + " ..\\submission.zip", "echo Done. ..\\submission.zip", ""]
+          open(os.path.join(d, 'reassemble.bat'), 'w').write("\n".join(bat))
 
-          {
-            echo "#!/usr/bin/env bash"
-            echo "set -e"
-            echo 'cd "$(dirname "$0")"'
-            echo 'cat $(ls part_* | sort) > ../submission.zip'
-            echo 'echo "MD5: $(md5sum ../submission.zip)"'
-            echo 'echo "Size: $(stat -c%s ../submission.zip) bytes"'
-          } > reassemble.sh
-          chmod +x reassemble.sh
-          echo "== done =="
+          sh = ["#!/usr/bin/env bash", "set -e", 'cd "$(dirname "$0")"', "cat " + " ".join(names) + " > ../submission.zip", 'echo "MD5: $(md5sum ../submission.zip)"', 'echo "Size: $(stat -c%s ../submission.zip) bytes"', ""]
+          open(os.path.join(d, 'reassemble.sh'), 'w').write("\n".join(sh))
+          os.chmod(os.path.join(d, 'reassemble.sh'), 0o755)
+
+          man = []
+          man.append("# submission.zip — сборка из частей\n")
+          man.append("Сборка `submission.zip` из чанков `part_00..part_%02d` (каждый < 100 МиБ, лимит GitHub на файл).\n" % (len(names) - 1))
+          man.append("## Быстрая сборка\n")
+          man.append("```bat")
+          man.append(":: Windows (CMD), из папки submission_parts:")
+          man.append("reassemble.bat")
+          man.append("```\n")
+          man.append("```bash")
+          man.append("# Linux / macOS / Git Bash:")
+          man.append("./reassemble.sh")
+          man.append("# или вручную:")
+          man.append("cat submission_parts/part_* > submission.zip")
+          man.append("```\n")
+          man.append("## Контрольные суммы\n")
+          man.append("ZIP_MD5 `%s` (полный размер %d байт)\n" % (zip_md5, total))
+          man.append("### Чанки (md5)\n")
+          man.append("```")
+          man.extend(chunk_lines)
+          man.append("```\n")
+          man.append("## Содержимое submission.zip\n")
+          man.append("```")
+          man.extend(listing.splitlines()[:60])
+          man.append("```\n")
+          man.append("Полный листинг: [zip_listing.txt](zip_listing.txt)")
+          open(os.path.join(d, 'MANIFEST.md'), 'w').write("\n".join(man) + "\n")
+          print("MANIFEST written, total bytes:", total)
+          PYEOF
+          echo "== all phases done =="
 
       - name: Commit and push in <2GB batches
         if: steps.guard.outputs.skip != 'true'
         run: |
           set -e
+          trap 'echo "ERR line=$LINENO cmd=$BASH_COMMAND" >> /tmp/trace.log' ERR
           cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -199,6 +209,30 @@ jobs:
           done
           echo "== all pushed =="
           git log --oneline -8
+
+      - name: Debug trace to repo on failure
+        if: failure()
+        run: |
+          set -x
+          cd "$GITHUB_WORKSPACE"
+          {
+            echo "=== run ${{ github.run_id }} step failed ==="
+            echo "=== trace ==="
+            cat /tmp/trace.log 2>/dev/null || echo "(no trace)"
+            echo "=== /tmp/sub ==="
+            ls -la /tmp/sub 2>/dev/null || true
+            echo "=== submission_parts ==="
+            ls -la submission_parts 2>/dev/null || true
+            echo "=== df ==="
+            df -h
+            echo "=== bash version ==="
+            bash --version
+          } > submission_parts_debug.log 2>&1 || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f submission_parts_debug.log
+          git commit -m "debug trace from failed run ${{ github.run_id }}" || true
+          git push origin HEAD:arena/8c48778b-vision-action-data-factory || true
 
       - name: Summary
         if: steps.guard.outputs.skip != 'true'
