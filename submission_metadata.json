@@ -1,0 +1,4 @@
+{
+  "base_vlm": "HuggingFaceTB/SmolVLM2-500M-Video-Instruct",
+  "vla_suite": "libero"
+}
