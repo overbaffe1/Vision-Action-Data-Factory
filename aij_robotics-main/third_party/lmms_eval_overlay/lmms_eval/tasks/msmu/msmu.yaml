@@ -1,0 +1,5 @@
+task: msmu
+tag:
+  - spatial
+  - vqa
+include: _default_template_yaml

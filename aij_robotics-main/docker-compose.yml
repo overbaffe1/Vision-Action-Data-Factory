@@ -1,0 +1,19 @@
+services:
+  pipeline:
+    build: .
+    image: aij-robotics:latest
+    gpus: all
+    working_dir: /workspace
+    volumes:
+      # Mount host configs (participant + editable training templates).
+      - ./configs:/workspace/configs:ro
+      # Host ShareGPT JSONL root → /data/vlm
+      - ${VLM_DATA_DIR:-./examples/smoke}:/data/vlm:ro
+      # Host LeRobot dataset root → /data/vla
+      - ${VLA_DATA_DIR:-./examples/smoke}:/data/vla:ro
+      - ./runs:/workspace/runs
+      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/root/.cache/huggingface
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - TRITON_CACHE_DIR=/tmp/triton_cache_vla_hackathon
+    command: ["./scripts/run_pipeline.sh", "configs/participant.yaml"]

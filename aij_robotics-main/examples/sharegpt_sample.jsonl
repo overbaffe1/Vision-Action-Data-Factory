@@ -1,0 +1,1 @@
+{"messages":[{"role":"user","content":"<image>\nWhat subtask is the robot currently performing?\nInstruction: Place the red block in the bowl"},{"role":"assistant","content":"The robot is moving its gripper toward the red block."}],"images":["/absolute/path/to/frame.png"]}

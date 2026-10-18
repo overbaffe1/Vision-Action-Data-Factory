@@ -1,0 +1,52 @@
+dataset_path: cpystan/MSMU
+test_split: test
+output_type: generate_until
+process_docs: !function utils.msmu_process_docs
+doc_to_visual: !function utils.msmu_doc_to_visual
+doc_to_text: !function utils.msmu_doc_to_text
+doc_to_target: !function utils.msmu_doc_to_target
+process_results: !function utils.msmu_process_results
+metric_list:
+  - metric: msmu_existence
+    aggregation: !function utils.msmu_aggregate_existence
+    higher_is_better: true
+  - metric: msmu_object_counting
+    aggregation: !function utils.msmu_aggregate_object_counting
+    higher_is_better: true
+  - metric: msmu_scale_estimation
+    aggregation: !function utils.msmu_aggregate_scale_estimation
+    higher_is_better: true
+  - metric: msmu_grounding
+    aggregation: !function utils.msmu_aggregate_grounding
+    higher_is_better: true
+  - metric: msmu_relative_position
+    aggregation: !function utils.msmu_aggregate_relative_position
+    higher_is_better: true
+  - metric: msmu_absolute_distance
+    aggregation: !function utils.msmu_aggregate_absolute_distance
+    higher_is_better: true
+  - metric: msmu_scale_comparison
+    aggregation: !function utils.msmu_aggregate_scale_comparison
+    higher_is_better: true
+  - metric: msmu_reference_object_estimation
+    aggregation: !function utils.msmu_aggregate_reference_object_estimation
+    higher_is_better: true
+  - metric: msmu_average
+    aggregation: !function utils.msmu_aggregate_average
+    higher_is_better: true
+  - metric: msmu_overall_accuracy
+    aggregation: !function utils.msmu_aggregate_overall_accuracy
+    higher_is_better: true
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.3
+    description: "MSMU-Bench (cpystan/MSMU test). HF-style 8 category metrics + macro Average + micro overall."

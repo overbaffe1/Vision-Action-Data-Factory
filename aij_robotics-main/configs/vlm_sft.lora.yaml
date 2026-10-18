@@ -1,0 +1,53 @@
+### model
+# Default LoRA template — participants may edit freely.
+model_name_or_path: HuggingFaceTB/SmolVLM2-500M-Video-Instruct
+image_max_pixels: 822816
+video_max_pixels: 16384
+video_fps: 2.0
+video_maxlen: 64
+trust_remote_code: true
+flash_attn: disabled
+
+### method
+stage: sft
+do_train: true
+do_eval: false
+finetuning_type: lora
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target: all
+freeze_vision_tower: true
+freeze_multi_modal_projector: true
+disable_gradient_checkpointing: false
+# deepspeed path is injected by the pipeline (absolute path to LLaMA-Factory)
+
+### dataset
+# dataset / dataset_dir / output_dir are injected by the pipeline
+template: smolvlm2
+cutoff_len: 4096
+overwrite_cache: true
+preprocessing_num_workers: 16
+dataloader_num_workers: 4
+
+### output
+logging_steps: 10
+save_strategy: steps
+save_steps: 500
+plot_loss: true
+overwrite_output_dir: true
+save_only_model: false
+report_to: none
+
+### train
+seed: 42
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 8
+learning_rate: 1.0e-4
+num_train_epochs: 1.0
+warmup_ratio: 0.03
+lr_scheduler_type: cosine
+weight_decay: 0.01
+max_grad_norm: 1.0
+bf16: true
+ddp_timeout: 180000000

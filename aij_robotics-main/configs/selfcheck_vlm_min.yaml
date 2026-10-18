@@ -1,0 +1,16 @@
+# Minimal suite for plumbing verify (not official Score).
+suite_name: score_selfcheck_smoke_min
+task_aliases:
+  crosspoint: crosspoint_bench
+env: {}
+tasks_process_with_media: []
+tasks:
+  - erqa
+default:
+  batch_size: 1
+  limit: 1
+  num_fewshot: 0
+  log_samples: true
+task_overrides:
+  erqa:
+    batch_size: 1

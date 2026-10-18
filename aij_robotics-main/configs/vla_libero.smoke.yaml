@@ -1,0 +1,46 @@
+# Smoke LIBERO action-expert template (--smoke / run_smoke.sh) — free to edit.
+# paths.vlm_checkpoint / paths.dataset_dir / paths.output_dir / runtime are injected.
+# Uses local mini dataset: examples/smoke/libero_mini (see make_mini_libero_dataset.py).
+
+dataset:
+  repo_id: local/libero-mini-smoke
+  revision: main
+  episode_count: 5
+  subset_seed: 1000
+  use_imagenet_stats: true
+  video_backend: pyav
+
+policy:
+  load_vlm_weights: true
+  train_expert_only: true
+  freeze_vision_encoder: true
+  train_state_proj: true
+  chunk_size: 8
+  n_action_steps: 8
+  num_vlm_layers: -1
+  num_expert_layers: -1
+  expert_width_multiplier: 0.75
+  attention_mode: cross_attn
+  self_attn_every_n_layers: 2
+  device: cuda
+
+optimizer:
+  learning_rate: 0.0001
+  betas: [0.9, 0.95]
+  epsilon: 0.00000001
+  weight_decay: 0.0000000001
+  grad_clip_norm: 10.0
+  warmup_steps: 1
+  decay_steps: 20
+  decay_learning_rate: 0.0000025
+
+training:
+  job_name: smolvla-libero-smoke
+  steps: 10
+  batch_size: 1
+  num_workers: 0
+  seed: 1000
+  log_freq: 1
+  save_freq: 5
+  resume: false
+  resume_config_path: null
