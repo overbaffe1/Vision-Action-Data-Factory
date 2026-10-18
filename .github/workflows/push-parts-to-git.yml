@@ -1,0 +1,210 @@
+name: Push submission parts to git tree
+
+# Забирает submission.zip.part.* из GitHub Release (runner → runner, быстро),
+# проверяет целостность zip (CRC), нарезает на чанки <100MiB (лимит GitHub на файл)
+# и пушит их ПРЯМО В GIT ДЕРЕВО пачками по ~1.3ГБ (лимит push = 2ГБ).
+# После этого submission.zip скачивается обычным `git clone` / `git pull`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag с submission.zip.part.*'
+        required: true
+        default: 'submission-20261018-1902'
+      chunk_mb:
+        description: 'Размер чанка в МиБ (должен быть < 100)'
+        required: true
+        default: '95'
+      force:
+        description: 'Пересобрать, даже если submission_parts/ уже есть'
+        required: false
+        default: 'false'
+  push:
+    branches:
+      - arena/8c48778b-vision-action-data-factory
+    paths:
+      - '.github/workflows/push-parts-to-git.yml'
+
+jobs:
+  push-parts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/8c48778b-vision-action-data-factory
+          fetch-depth: 1
+
+      - name: Guard (skip if already pushed)
+        id: guard
+        run: |
+          if [ -f submission_parts/MANIFEST.md ] && [ "${{ github.event.inputs.force }}" != "true" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::submission_parts/ уже есть в дереве. Для пересборки запусти с force=true."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download release parts (runner→runner)
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          mkdir -p /tmp/sub
+          gh release download "${{ github.event.inputs.release_tag }}" -R "${{ github.repository }}" -D /tmp/sub -p "submission.zip.part.*"
+          ls -lh /tmp/sub
+          echo "== structural magic check =="
+          echo -n "part.00 head: "; head -c 4 /tmp/sub/submission.zip.part.00 | od -An -tx1
+          echo -n "part.01 tail EOCD: "; tail -c 66000 /tmp/sub/submission.zip.part.01 | grep -aob $'PK\x05\x06' | tail -n 2 || echo "NOT FOUND"
+
+      - name: Combine, verify CRC, split into <100MiB chunks
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          CHUNK_MB: ${{ github.event.inputs.chunk_mb }}
+        run: |
+          set -e
+          cd /tmp/sub
+          cat submission.zip.part.00 submission.zip.part.01 > submission.zip
+          rm -f submission.zip.part.00 submission.zip.part.01
+          echo "== zip CRC + listing (python zipfile) =="
+          python3 - <<'PY'
+          import zipfile, hashlib
+          z = zipfile.ZipFile('submission.zip')
+          names = z.namelist()
+          print(f"{len(names)} entries")
+          lines = []
+          for n in names:
+              i = z.getinfo(n)
+              lines.append(f"{i.file_size:12d}  {n}")
+          open('zip_listing.txt','w').write("\n".join(lines) + "\n")
+          for l in lines[:40]:
+              print(l)
+          bad = z.testzip()
+          print("CRC:", "OK" if bad is None else f"BAD {bad}")
+          assert bad is None, f"CRC failed on {bad}"
+          h = hashlib.md5()
+          with open('submission.zip','rb') as f:
+              for chunk in iter(lambda: f.read(1 << 24), b''):
+                  h.update(chunk)
+          md5 = h.hexdigest()
+          print("ZIP_MD5", md5)
+          open('zip_md5.txt','w').write(md5 + "\n")
+          PY
+          echo "== split -b ${CHUNK_MB}M =="
+          mkdir -p "$GITHUB_WORKSPACE/submission_parts"
+          split -b "${CHUNK_MB}M" -d -a 2 submission.zip "$GITHUB_WORKSPACE/submission_parts/part_"
+          rm -f submission.zip
+          cd "$GITHUB_WORKSPACE/submission_parts"
+          echo "== chunks =="
+          ls -l part_* | head -n 50
+          md5sum part_* > chunk_md5.txt
+          cat chunk_md5.txt
+
+          echo "== generate MANIFEST + reassemble scripts =="
+          {
+            echo "# submission.zip — сборка из частей"
+            echo
+            echo "Сборка \`submission.zip\` из чанков \`part_00..part_N\` (каждый < 100 МиБ, лимит GitHub на файл)."
+            echo
+            echo "## Быстрая сборка"
+            echo
+            echo '```bat'
+            echo ':: Windows (CMD), из папки submission_parts:'
+            echo 'reassemble.bat'
+            echo
+            echo ':: Linux / macOS / Git Bash:'
+            echo './reassemble.sh'
+            echo '```'
+            echo
+            echo '```bash'
+            echo '# или вручную:'
+            echo 'cat submission_parts/part_* > submission.zip'
+            echo 'md5sum -c <(grep -v part_ submission_parts/MANIFEST.md | sed -n "s/.*ZIP_MD5 \`\\([a-f0-9]*\\)\`.*/\\1  submission.zip/p")  # опционально'
+            echo '```'
+            echo
+            echo "## Контрольные суммы"
+            echo
+            echo "ZIP_MD5 \`$(cat zip_md5.txt)\`"
+            echo
+            echo '### Чанки (md5)'
+            echo
+            echo '```'
+            cat chunk_md5.txt
+            echo '```'
+            echo
+            echo "## Содержимое submission.zip"
+            echo
+            echo '```'
+            head -n 60 zip_listing.txt
+            echo '```'
+            echo
+            echo "Полный листинг: [zip_listing.txt](zip_listing.txt)"
+          } > MANIFEST.md
+
+          {
+            echo "@echo off"
+            echo "cd /d %~dp0"
+            printf 'copy /b '
+            ls part_* | sort | paste -sd+ -
+            echo " ..\\submission.zip"
+            echo "echo Done. ..\\submission.zip"
+          } > reassemble.bat
+
+          {
+            echo "#!/usr/bin/env bash"
+            echo "set -e"
+            echo 'cd "$(dirname "$0")"'
+            echo 'cat $(ls part_* | sort) > ../submission.zip'
+            echo 'echo "MD5: $(md5sum ../submission.zip)"'
+            echo 'echo "Size: $(stat -c%s ../submission.zip) bytes"'
+          } > reassemble.sh
+          chmod +x reassemble.sh
+          echo "== done =="
+
+      - name: Commit and push in <2GB batches
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          set -e
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git config http.lowSpeedLimit 0
+          git config http.lowSpeedTime 999999
+
+          # 1) маленький коммит: манифест + скрипты
+          git add submission_parts/MANIFEST.md submission_parts/reassemble.bat submission_parts/reassemble.sh submission_parts/zip_md5.txt submission_parts/zip_listing.txt submission_parts/chunk_md5.txt
+          git commit -m "submission_parts: manifest + reassemble scripts (submission.zip from release ${{ github.event.inputs.release_tag }})"
+          git push origin HEAD:arena/8c48778b-vision-action-data-factory
+
+          # 2) чанки пачками по 15 шт (~1.3ГБ на push, лимит 2ГБ)
+          parts=($(ls submission_parts/part_* | sort))
+          total=${#parts[@]}
+          echo "total chunks: $total"
+          i=0
+          batch_size=15
+          while [ $i -lt $total ]; do
+            batch=("${parts[@]:$i:$batch_size}")
+            git add "${batch[@]}"
+            git commit -m "submission_parts: chunks ${i}..$((i + ${#batch[@]} - 1)) of ${total}"
+            echo "pushing batch at $i (${#batch[@]} files)..."
+            git push origin HEAD:arena/8c48778b-vision-action-data-factory || (sleep 10 && git push origin HEAD:arena/8c48778b-vision-action-data-factory)
+            i=$((i + batch_size))
+          done
+          echo "== all pushed =="
+          git log --oneline -8
+
+      - name: Summary
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          {
+            echo "## submission_parts запушены в git дерево"
+            echo
+            echo "- Чанки: \`submission_parts/part_00..part_N\` (по \`${{ github.event.inputs.chunk_mb }}\` МиБ)"
+            echo "- Сборка: \`cd submission_parts && reassemble.bat\` (Windows) или \`./reassemble.sh\`"
+            echo "- Контрольные суммы: \`submission_parts/MANIFEST.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"

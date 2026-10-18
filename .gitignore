@@ -20,6 +20,8 @@ logs/
 # *.zip
 # *.safetensors
 # *.bin
+# Собранный из submission_parts/ zip не коммитим целиком
+/submission.zip
 # OS
 .DS_Store
 Thumbs.db

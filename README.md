@@ -205,6 +205,32 @@ Score = 100·(0.4·VLM + 0.6·VLA)
 
 Твоя ссылка на SberCloud требует VPN/доступ из облака. Вне облака — `SSL EOF`. Заливать 3.2 ГБ через обычный `git push` — не выйдет (лимит GitHub 100 МБ/файл, 2 ГБ push).
 
+**Вариант D (ГОТОВО): `submission_parts/` в git-дереве — просто `git pull`**
+
+Workflow `.github/workflows/push-parts-to-git.yml` забирает `submission.zip.part.*` из релиза
+`submission-20261018-1902` внешним runner'ом, проверяет CRC всего zip и пушит в ветку
+`arena/8c48778b-vision-action-data-factory` чанки `submission_parts/part_00..part_N` (по 95 МиБ,
+каждый < 100 МБ лимита GitHub). Скачивается обычным git:
+
+```bash
+git clone https://github.com/overbaffe1/Vision-Action-Data-Factory.git
+cd Vision-Action-Data-Factory
+git checkout arena/8c48778b-vision-action-data-factory
+
+# собрать submission.zip из частей:
+cd submission_parts
+./reassemble.sh          # Linux/macOS/Git Bash
+# или Windows CMD:
+reassemble.bat
+
+# проверить md5 (лежит в MANIFEST.md):
+md5sum ../submission.zip
+unzip -l ../submission.zip | head
+```
+
+Контрольные суммы и листинг: [`submission_parts/MANIFEST.md`](submission_parts/MANIFEST.md).
+Релиз с 2 большими кусками остаётся как бэкап: https://github.com/overbaffe1/Vision-Action-Data-Factory/releases/tag/submission-20261018-1902
+
 **Вариант A: Git LFS (рекомендуется для submission.zip)**
 
 ```bash
