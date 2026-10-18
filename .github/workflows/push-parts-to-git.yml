@@ -41,7 +41,7 @@ jobs:
       - name: Guard (skip if already pushed)
         id: guard
         run: |
-          if [ -f submission_parts/MANIFEST.md ] && [ "${{ github.event.inputs.force }}" != "true" ]; then
+          if [ -f submission_parts/MANIFEST.md ] && [ "${{ github.event.inputs.force || 'false' }}" != "true" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "::notice::submission_parts/ уже есть в дереве. Для пересборки запусти с force=true."
           else
@@ -56,7 +56,7 @@ jobs:
           set -e
           trap 'echo "ERR line=$LINENO cmd=$BASH_COMMAND" >> /tmp/trace.log' ERR
           mkdir -p /tmp/sub
-          gh release download "${{ github.event.inputs.release_tag }}" -R "${{ github.repository }}" -D /tmp/sub -p "submission.zip.part.*"
+          gh release download "${{ github.event.inputs.release_tag || 'submission-20261018-1902' }}" -R "${{ github.repository }}" -D /tmp/sub -p "submission.zip.part.*"
           ls -la /tmp/sub | tee -a /tmp/trace.log
           for f in /tmp/sub/submission.zip.part.*; do
             echo "$f $(stat -c%s "$f")" | tee -a /tmp/trace.log
@@ -65,11 +65,16 @@ jobs:
       - name: Combine, verify CRC, split into <100MiB chunks
         if: steps.guard.outputs.skip != 'true'
         env:
-          CHUNK_MB: ${{ github.event.inputs.chunk_mb }}
+          CHUNK_MB: ${{ github.event.inputs.chunk_mb || '95' }}
         run: |
           set -e
           trap 'echo "ERR line=$LINENO cmd=$BASH_COMMAND" >> /tmp/trace.log' ERR
           exec > >(tee -a /tmp/trace.log) 2>&1
+
+          # На push-событии inputs пусты — валидируем и подставляем 95
+          case "${CHUNK_MB:-}" in ''|*[!0-9]*) echo "CHUNK_MB='${CHUNK_MB:-}' invalid -> 95"; CHUNK_MB=95;; esac
+          if [ "$CHUNK_MB" -lt 1 ] || [ "$CHUNK_MB" -gt 99 ]; then echo "CHUNK_MB=$CHUNK_MB out of range -> 95"; CHUNK_MB=95; fi
+          echo "CHUNK_MB=$CHUNK_MB"
 
           echo "== phase 1: combine =="
           cd /tmp/sub
@@ -111,7 +116,7 @@ jobs:
           PYEOF
 
           echo "== phase 3: split into ${CHUNK_MB}M chunks =="
-          split -b "${CHUNK_MB}M" -d -a 2 submission.zip "$GITHUB_WORKSPACE/submission_parts/part_"
+          split -b "${CHUNK_MB}M" -d -a 4 submission.zip "$GITHUB_WORKSPACE/submission_parts/part_"
           rm -f /tmp/sub/submission.zip
           cd "$GITHUB_WORKSPACE/submission_parts"
           ls -la part_*
@@ -188,9 +193,11 @@ jobs:
           git config http.lowSpeedLimit 0
           git config http.lowSpeedTime 999999
 
+          # 0) убрать debug-лог прошлых падений, если был
+          git rm -f --ignore-unmatch submission_parts_debug.log || true
           # 1) маленький коммит: манифест + скрипты
           git add submission_parts/MANIFEST.md submission_parts/reassemble.bat submission_parts/reassemble.sh submission_parts/zip_md5.txt submission_parts/zip_listing.txt submission_parts/chunk_md5.txt
-          git commit -m "submission_parts: manifest + reassemble scripts (submission.zip from release ${{ github.event.inputs.release_tag }})"
+          git commit -m "submission_parts: manifest + reassemble scripts (submission.zip from release ${{ github.event.inputs.release_tag || 'submission-20261018-1902' }})"
           git push origin HEAD:arena/8c48778b-vision-action-data-factory
 
           # 2) чанки пачками по 15 шт (~1.3ГБ на push, лимит 2ГБ)
