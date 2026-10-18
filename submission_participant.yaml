@@ -1,0 +1,35 @@
+# Participant config — edit data paths here.
+# Training templates (lr, steps, LoRA, …): configs/vlm_sft*.yaml, configs/vla_libero*.yaml — free to edit.
+#
+# Smoke (mini data):  ./scripts/run_smoke.sh
+# Full run:           ./scripts/run_pipeline.sh configs/participant.yaml
+
+run_name: team_demo
+
+vlm:
+  # ShareGPT JSONL: {"messages": [...], "images": [...]}
+  # Prefer relative image paths (e.g. images/0001.jpg), resolved via media_dir.
+  data_path: /data/vlm/train.jsonl
+  eval_data_path: null
+  # Optional. Defaults to directory of data_path.
+  # Absolute foreign paths in JSONL are remapped by basename under this folder.
+  # media_dir: /data/vlm
+
+vla:
+  suite: libero
+  # LeRobot v3.0 root (meta/info.json). HuggingFaceVLA/libero @ v3.0
+  # → image/image2, state 8, action 7
+  dataset_dir: /data/vla
+
+runtime:
+  gpu_indices: [0]
+  output_root: /workspace/runs
+  cache_dir: /workspace/cache/core
+  lerobot_home: /workspace/cache/lerobot
+
+# Optional overrides (defaults: third_party/ + PATH / sys.executable)
+# paths:
+#   llama_factory: /workspace/third_party/LLaMA-Factory
+#   scaling_lawyer: /workspace/third_party/scaling-lawyer
+#   llamafactory_cli: /usr/local/bin/llamafactory-cli
+#   scaling_lawyer_python: /usr/local/bin/python
