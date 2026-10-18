@@ -1,0 +1,23 @@
+{
+  "model_type": "smolvlm",
+  "architectures": [
+    "Idefics3ForConditionalGeneration"
+  ],
+  "text_config": {
+    "model_type": "llama",
+    "hidden_size": 576,
+    "intermediate_size": 1536,
+    "num_hidden_layers": 4,
+    "num_attention_heads": 8,
+    "num_key_value_heads": 2,
+    "vocab_size": 49152,
+    "max_position_embeddings": 4096
+  },
+  "vision_config": {
+    "model_type": "siglip_vision_model",
+    "hidden_size": 768,
+    "num_hidden_layers": 4,
+    "num_attention_heads": 8,
+    "image_size": 256
+  }
+}

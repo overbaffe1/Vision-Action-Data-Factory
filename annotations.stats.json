@@ -1,0 +1,9 @@
+{
+  "episodes": 3,
+  "sampled_frames": 23,
+  "examples": 92,
+  "seed": 42,
+  "input": "data/final_input",
+  "output": "annotations.jsonl",
+  "elapsed_sec": 0.08
+}
