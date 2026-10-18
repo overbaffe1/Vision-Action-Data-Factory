@@ -1,0 +1,202 @@
+name: Finalize submission.zip
+
+# Собирает финальный submission.zip для загрузки в форму:
+# 1) склеивает submission_parts/part_* из git-дерева (реальные веса SmolVLM2 + SmolVLA)
+# 2) заменяет заглушки на полноценные generate_dataset.py / config.yaml / annotations.jsonl / src/ / requirements.txt / README.md
+# 3) добавляет metadata.json + participant.yaml
+# 4) проверяет <5ГБ, md5, отсутствие датасетов/картинок
+# 5) разбивает на 2 части и заливает в GitHub Release -> ссылка на скачивание
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/8c48778b-vision-action-data-factory
+    paths:
+      - '.github/workflows/finalize-submission.yml'
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/8c48778b-vision-action-data-factory
+          fetch-depth: 1
+
+      - name: Assemble base submission.zip from chunks
+        run: |
+          set -e
+          trap 'echo "ERR line=$LINENO cmd=$BASH_COMMAND" >> /tmp/trace.log' ERR
+          cd "$GITHUB_WORKSPACE"
+          n=$(ls submission_parts/part_* | wc -l)
+          echo "chunks: $n"
+          [ "$n" -ge 30 ]
+          cat submission_parts/part_* > /tmp/base_submission.zip
+          echo "base size: $(stat -c%s /tmp/base_submission.zip)"
+          md5sum /tmp/base_submission.zip
+          # сверка с манифестом
+          expected=$(grep ZIP_MD5 submission_parts/MANIFEST.md | sed -n 's/.*`\([a-f0-9]*\)`.*/\1/p')
+          actual=$(md5sum /tmp/base_submission.zip | cut -d' ' -f1)
+          echo "expected=$expected actual=$actual"
+          [ "$expected" = "$actual" ]
+
+      - name: Rebuild zip with full pipeline code + metadata
+        run: |
+          set -e
+          trap 'echo "ERR line=$LINENO cmd=$BASH_COMMAND" >> /tmp/trace.log' ERR
+          cd "$GITHUB_WORKSPACE"
+          python3 - <<'PYEOF'
+          import json, os, zipfile, hashlib
+
+          ws = os.environ.get('GITHUB_WORKSPACE', os.getcwd())
+          out_path = '/tmp/submission.zip'
+          replace_files = {
+              'generate_dataset.py': os.path.join(ws, 'generate_dataset.py'),
+              'config.yaml': os.path.join(ws, 'config.yaml'),
+              'annotations.jsonl': os.path.join(ws, 'annotations.jsonl'),
+              'requirements.txt': os.path.join(ws, 'requirements.txt'),
+              'README.md': os.path.join(ws, 'README.md'),
+              'metadata.json': os.path.join(ws, 'submission_metadata.json'),
+              'participant.yaml': os.path.join(ws, 'submission_participant.yaml'),
+          }
+          # src/ берём целиком (.py)
+          src_files = {}
+          for root, _, names in os.walk(os.path.join(ws, 'src')):
+              for n in sorted(names):
+                  if n.endswith('.py'):
+                      full = os.path.join(root, n)
+                      arc = os.path.relpath(full, ws).replace(os.sep, '/')
+                      src_files[arc] = full
+
+          drop_prefixes = ('src/',)
+          drop_exact = set(replace_files)
+
+          with zipfile.ZipFile('/tmp/base_submission.zip', 'r') as zin, \
+               zipfile.ZipFile(out_path, 'w', zipfile.ZIP_STORED) as zout:
+              for info in zin.infolist():
+                  name = info.filename
+                  if name in drop_exact or name.startswith(drop_prefixes):
+                      continue
+                  zout.writestr(info, zin.read(name))
+              for arc, full in {**replace_files, **src_files}.items():
+                  zout.write(full, arc)
+                  print(f"add {arc} ({os.path.getsize(full)} B)")
+
+          total = os.path.getsize(out_path)
+          print("final size:", total)
+          assert total < 5 * 1024**3, "over 5GB limit!"
+          h = hashlib.md5()
+          with open(out_path, 'rb') as f:
+              for blk in iter(lambda: f.read(1 << 24), b''):
+                  h.update(blk)
+          md5 = h.hexdigest()
+          print("FINAL_MD5", md5)
+          open('/tmp/final_md5.txt', 'w').write(md5)
+
+          # отчёт по содержимому
+          z = zipfile.ZipFile(out_path)
+          names = z.namelist()
+          print(f"{len(names)} entries")
+          bad = []
+          for n in names:
+              ln = n.lower()
+              if ln.endswith(('.jpg', '.png', '.jpeg', '.mp4', '.parquet')) or ln.startswith(('images/', 'data/', 'cache/', 'runs/', 'logs/')):
+                  bad.append(n)
+          assert not bad, f"datasets/media not allowed in zip: {bad}"
+          for n in sorted(names):
+              print(f"{z.getinfo(n).file_size:12d}  {n}")
+          # веса на месте
+          assert 'smolvlm2/model.safetensors' in names
+          assert 'action_expert/model.safetensors' in names
+          assert 'metadata.json' in names
+          assert 'participant.yaml' in names
+          print("checks OK")
+          PYEOF
+
+      - name: Split into 2 parts and publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          trap 'echo "ERR line=$LINENO cmd=$BASH_COMMAND" >> /tmp/trace.log' ERR
+          cd /tmp
+          SIZE=$(stat -c%s submission.zip)
+          HALF=$(( SIZE / 2 + 1048576 ))
+          split -b "$HALF" -d -a 2 submission.zip submission_final.zip.part.
+          ls -lh submission_final.zip.part.*
+          # каждая часть < 2ГБ (лимит release asset)
+          for f in submission_final.zip.part.*; do
+            s=$(stat -c%s "$f"); echo "$f $s"; [ "$s" -lt 2000000000 ]
+          done
+          md5sum submission_final.zip.part.* | tee /tmp/parts_md5.txt
+          TAG="submission-final-$(date +%Y%m%d-%H%M)"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          {
+            echo "# Готовый submission.zip для загрузки в форму"
+            echo
+            echo "Файл разбит на 2 части (лимит GitHub 2ГБ на файл). Склейка:"
+            echo
+            echo '```bat'
+            echo 'copy /b submission_final.zip.part.00+submission_final.zip.part.01 submission.zip'
+            echo '```'
+            echo
+            echo '```bash'
+            echo 'cat submission_final.zip.part.* > submission.zip'
+            echo '```'
+            echo
+            echo "MD5 готового submission.zip: \`$(cat /tmp/final_md5.txt)\`"
+            echo
+            echo "Размер: $SIZE байт"
+            echo
+            echo "## Что внутри"
+            echo
+            echo "- smolvlm2/ — веса SmolVLM2-500M-Video-Instruct (2.03 ГБ)"
+            echo "- action_expert/ — веса SmolVLA (1.42 ГБ)"
+            echo "- generate_dataset.py, config.yaml, annotations.jsonl, src/, requirements.txt, README.md — полный пайплайн"
+            echo "- metadata.json, participant.yaml"
+          } > /tmp/RELEASE_NOTES.md
+          gh release create "$TAG" -R "${{ github.repository }}" \
+            --title "submission.zip готовый ($TAG)" \
+            --notes-file /tmp/RELEASE_NOTES.md
+          gh release upload "$TAG" -R "${{ github.repository }}" \
+            submission_final.zip.part.00 submission_final.zip.part.01 --clobber
+          echo "RELEASE_URL=https://github.com/${{ github.repository }}/releases/tag/$TAG" >> "$GITHUB_ENV"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Готовый submission.zip"
+            echo
+            echo "Скачать 2 части: ${{ env.RELEASE_URL }}"
+            echo
+            echo "Склейка: \`copy /b submission_final.zip.part.00+submission_final.zip.part.01 submission.zip\`"
+            echo
+            echo "MD5: \`$(cat /tmp/final_md5.txt)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Debug trace to repo on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "=== run ${{ github.run_id }} ==="
+            cat /tmp/trace.log 2>/dev/null || true
+            ls -la /tmp/*.zip 2>/dev/null || true
+          } > submission_parts_debug.log 2>&1 || true
+          sha=$(gh api "repos/${{ github.repository }}/contents/submission_parts_debug.log?ref=arena/8c48778b-vision-action-data-factory" --jq .sha 2>/dev/null || echo "")
+          python3 - "$sha" > /tmp/put.json <<'PYEOF'
+          import json, base64, sys
+          sha = sys.argv[1] if len(sys.argv) > 1 else ''
+          d = {"message": "finalize debug run ${{ github.run_id }}",
+               "content": base64.b64encode(open('submission_parts_debug.log','rb').read()).decode(),
+               "branch": "arena/8c48778b-vision-action-data-factory"}
+          if sha:
+              d["sha"] = sha
+          print(json.dumps(d))
+          PYEOF
+          gh api -X PUT "repos/${{ github.repository }}/contents/submission_parts_debug.log" --input /tmp/put.json || true
