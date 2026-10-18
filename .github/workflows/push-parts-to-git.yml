@@ -41,11 +41,13 @@ jobs:
       - name: Guard (skip if already pushed)
         id: guard
         run: |
-          if [ -f submission_parts/MANIFEST.md ] && [ "${{ github.event.inputs.force || 'false' }}" != "true" ]; then
+          n_parts=$(ls submission_parts/part_* 2>/dev/null | wc -l)
+          if [ -f submission_parts/MANIFEST.md ] && [ "$n_parts" -gt 0 ] && [ "${{ github.event.inputs.force || 'false' }}" != "true" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::submission_parts/ уже есть в дереве. Для пересборки запусти с force=true."
+            echo "::notice::submission_parts/ уже есть в дереве ($n_parts chunks). Для пересборки запусти с force=true."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "manifest=$([ -f submission_parts/MANIFEST.md ] && echo yes || echo no) chunks=$n_parts"
           fi
 
       - name: Download release parts (runner→runner)
@@ -189,36 +191,51 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config http.postBuffer 524288000
+          git config http.version HTTP/1.1
+          git config http.postBuffer 1073741824
           git config http.lowSpeedLimit 0
           git config http.lowSpeedTime 999999
 
+          push_branch () {
+            local a ok=0
+            for a in 1 2 3; do
+              if git push origin HEAD:arena/8c48778b-vision-action-data-factory; then ok=1; break; fi
+              echo "push attempt $a failed, retrying in 20s..." | tee -a /tmp/trace.log
+              sleep 20
+            done
+            [ "$ok" -eq 1 ]
+          }
+
           # 0) убрать debug-лог прошлых падений, если был
           git rm -f --ignore-unmatch submission_parts_debug.log || true
-          # 1) маленький коммит: манифест + скрипты
+          # 1) маленький коммит: манифест + скрипты (идемпотентно: мог быть закоммичен в прошлом run)
           git add submission_parts/MANIFEST.md submission_parts/reassemble.bat submission_parts/reassemble.sh submission_parts/zip_md5.txt submission_parts/zip_listing.txt submission_parts/chunk_md5.txt
-          git commit -m "submission_parts: manifest + reassemble scripts (submission.zip from release ${{ github.event.inputs.release_tag || 'submission-20261018-1902' }})"
-          git push origin HEAD:arena/8c48778b-vision-action-data-factory
+          git diff --cached --quiet && echo "manifest unchanged" || {
+            git commit -m "submission_parts: manifest + reassemble scripts (submission.zip from release ${{ github.event.inputs.release_tag || 'submission-20261018-1902' }})"
+            push_branch
+          }
 
-          # 2) чанки пачками по 15 шт (~1.3ГБ на push, лимит 2ГБ)
+          # 2) чанки пачками по 5 шт (~475МБ на push — мелкие push'и не ловят 408)
           parts=($(ls submission_parts/part_* | sort))
           total=${#parts[@]}
           echo "total chunks: $total"
           i=0
-          batch_size=15
+          batch_size=5
           while [ $i -lt $total ]; do
             batch=("${parts[@]:$i:$batch_size}")
             git add "${batch[@]}"
             git commit -m "submission_parts: chunks ${i}..$((i + ${#batch[@]} - 1)) of ${total}"
-            echo "pushing batch at $i (${#batch[@]} files)..."
-            git push origin HEAD:arena/8c48778b-vision-action-data-factory || (sleep 10 && git push origin HEAD:arena/8c48778b-vision-action-data-factory)
+            echo "pushing batch at $i (${#batch[@]} files)..." | tee -a /tmp/trace.log
+            push_branch
             i=$((i + batch_size))
           done
-          echo "== all pushed =="
-          git log --oneline -8
+          echo "== all pushed ==" | tee -a /tmp/trace.log
+          git log --oneline -12
 
       - name: Debug trace to repo on failure
         if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
           cd "$GITHUB_WORKSPACE"
@@ -230,16 +247,26 @@ jobs:
             ls -la /tmp/sub 2>/dev/null || true
             echo "=== submission_parts ==="
             ls -la submission_parts 2>/dev/null || true
+            echo "=== git log ==="
+            git log --oneline -12 2>/dev/null || true
             echo "=== df ==="
             df -h
-            echo "=== bash version ==="
-            bash --version
           } > submission_parts_debug.log 2>&1 || true
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f submission_parts_debug.log
-          git commit -m "debug trace from failed run ${{ github.run_id }}" || true
-          git push origin HEAD:arena/8c48778b-vision-action-data-factory || true
+          # пишем через REST API (git push тут может тащить незапушенные гигабайты)
+          sha=$(gh api "repos/${{ github.repository }}/contents/submission_parts_debug.log?ref=arena/8c48778b-vision-action-data-factory" --jq .sha 2>/dev/null || echo "")
+          python3 - "$sha" > /tmp/put.json <<'PYEOF'
+          import json, base64, sys
+          sha = sys.argv[1] if len(sys.argv) > 1 else ''
+          d = {
+              "message": "debug trace from failed run ${{ github.run_id }}",
+              "content": base64.b64encode(open('submission_parts_debug.log', 'rb').read()).decode(),
+              "branch": "arena/8c48778b-vision-action-data-factory",
+          }
+          if sha:
+              d["sha"] = sha
+          print(json.dumps(d))
+          PYEOF
+          gh api -X PUT "repos/${{ github.repository }}/contents/submission_parts_debug.log" --input /tmp/put.json || true
 
       - name: Summary
         if: steps.guard.outputs.skip != 'true'
