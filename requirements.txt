@@ -1,0 +1,30 @@
+# Vision-Action Data Factory — зависимости для generate_dataset.py
+# Установка: pip install -r requirements.txt
+# Для offline режима достаточно базовой части (без torch/cuda)
+numpy>=1.24
+Pillow>=10.0
+PyYAML>=6.0
+tqdm>=4.66
+opencv-python-headless>=4.8
+
+# LeRobot датасеты (parquet) — опционально, но рекомендуется
+pyarrow>=14.0
+pandas>=2.0
+huggingface_hub>=0.20
+
+# Детекция — опционально, fallback на dummy
+ultralytics>=8.0
+torch>=2.0; sys_platform != "emscripten"
+torchvision>=0.15; sys_platform != "emscripten"
+
+# CLIP/KNN retrieval — опционально
+open_clip_torch>=2.24; extra == "clip"
+sentence-transformers>=2.2; extra == "clip"
+
+# Локальная LLM-капшнер — опционально
+transformers>=4.40; extra == "llm"
+accelerate>=0.30; extra == "llm"
+
+# Для обучения VLM/VLA (из participant.zip) — ставится отдельно:
+# pip install -r aij_robotics-main/requirements.txt
+# + hf-libero==0.1.4, trl, peft, deepspeed, lerobot

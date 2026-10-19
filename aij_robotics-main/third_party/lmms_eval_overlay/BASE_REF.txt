@@ -1,0 +1,7 @@
+# Public lmms-eval commit this overlay was validated against.
+# setup_score_selfcheck.sh clones EvolvingLMMs-Lab/lmms-eval at this SHA (shallow).
+upstream_repo=https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+upstream_sha=75571cfe0fa36ca5ec2e6aa2bb268f9d38295af3
+# Source of overlay files (cv-team fork; not required for participants):
+fork_sha=3df0b1bd4160b4b81cb93b8ebb2ea65c92fb5043
+fork_branch=dev

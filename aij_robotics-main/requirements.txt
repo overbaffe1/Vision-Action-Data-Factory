@@ -1,0 +1,3 @@
+PyYAML==6.0.3
+# LIBERO simulator for participant self-check (lerobot-eval --env.type=libero).
+hf-libero==0.1.4

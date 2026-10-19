@@ -1,0 +1,35 @@
+pipeline:
+  raw_images_dir: data/raw_images
+  processed_images_dir: data/processed_images
+
+models:
+  # Device for local GPU models (YOLO, SAM2). "cuda" auto-falls back to CPU
+  # when unavailable. Use "cuda:0"/"cuda:1" to pin a specific card.
+  device: cuda
+  # SAM2 inference precision: float16 | bfloat16 | float32 | null (=float32).
+  # On A100, bfloat16 is a good speed/VRAM tradeoff.
+  sam2_dtype: bfloat16
+  # YOLO model weights and per-call batch size (used by batched YOLO worker).
+  yolo_model: yolov8m.pt
+  yolo_batch_size: 16
+  # Number of VLM worker threads (CLI --vlm-workers overrides this).
+  vlm_workers: 16
+  # Free CUDA cache after each GPU stage call to curb VRAM growth.
+  empty_cache: true
+  # Multi-GPU: "0,1" / "all" / null. >1 GPU spawns one process per GPU, each
+  # running the full pipeline on its shard. CLI --gpus overrides this.
+  gpus: null
+  # Where stage JSON outputs are written. CLI --output-dir overrides this.
+  output_dir: outputs
+
+resize:
+  target_size: [768, 512]
+  jpeg_quality: 85
+  progressive: true
+  supported_extensions:
+    - .jpg
+    - .jpeg
+    - .png
+    - .webp
+    - .bmp
+    - .tiff

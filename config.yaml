@@ -1,0 +1,145 @@
+# Vision-Action Data Factory — config
+# Запуск: python generate_dataset.py --input /data/raw --output /output/annotations.jsonl --config config.yaml
+seed: 42
+output:
+  # Куда писать датасет — переопределяется CLI --output
+  path: ./annotations.jsonl
+  # относительные пути к картинкам (resolve via media_dir)
+  relative_paths: true
+  max_examples: 50000  # лимит для дебага, null = без лимита
+
+input:
+  # Рекурсивный поиск LeRobot-датасетов (meta/info.json) и картинок
+  recursive: true
+  image_extensions: [".jpg", ".jpeg", ".png", ".webp", ".bmp"]
+  # Если parquet не парсится — fallback на image-folder режим
+  parquet_fallback: true
+
+sampling:
+  # Стратегия выборки кадров из эпизода
+  strategy: adaptive  # uniform | keyframe | adaptive
+  frames_per_episode: 5
+  # uniform: каждый N-й кадр
+  uniform_stride: 6
+  # keyframe: по дельте action/state
+  keyframe_threshold: 0.08
+  # adaptive: комбинация uniform + keyframe + gripper events
+  min_frames: 3
+  max_frames: 8
+  include_first_last: true
+  # QAOA-inspired: polish_worst — доровнять худшие эпизоды дополнительными кадрами
+  polish_worst_extra_frames: 2
+  polish_threshold: 0.35  # quality < threshold → добавить кадры
+
+tasks:
+  # Какие типы примеров генерировать (вес = доля в итоговом датасете)
+  enabled:
+    - scene_caption
+    - object_state
+    - spatial_relation
+    - subtask_current
+    - subtask_next
+    - decomposition
+    - progress
+    - completion
+    - error_cause
+    - recovery
+    - qa_counting
+    - qa_spatial
+    - qa_temporal
+    - qa_action
+    - bbox_grounding
+    - pointing
+  # Веса для балансировки (сумма нормализуется). Высший приоритет — spatial + subtask для VLA.
+  weights:
+    scene_caption: 1.0
+    object_state: 1.2
+    spatial_relation: 1.5
+    subtask_current: 1.5
+    subtask_next: 1.3
+    decomposition: 0.8
+    progress: 1.0
+    completion: 0.7
+    error_cause: 0.6
+    recovery: 0.6
+    qa_counting: 0.9
+    qa_spatial: 1.2
+    qa_temporal: 0.8
+    qa_action: 1.0
+    bbox_grounding: 1.4
+    pointing: 1.0
+  # Сколько примеров на кадр (среднее). Избыток режется judge+ratchet.
+  examples_per_frame: 3
+
+detectors:
+  yolo:
+    enabled: true
+    model: yolov8m.pt  # yolov8n.pt для CPU/скорости, yolov8m.pt для качества
+    batch_size: 8
+    conf: 0.25
+    iou: 0.45
+    device: auto  # cuda | cuda:0 | cpu | auto
+  sam2:
+    enabled: false  # требует веса facebook/sam2.1-hiera-large, по умолчанию off для offline
+    model: facebook/sam2.1-hiera-large
+    dtype: bfloat16
+    device: auto
+
+generation:
+  # QAOA-inspired режимы
+  ratchet:
+    enabled: true
+    # Для каждого кадра генерим N кандидатов разными шаблонами, выбираем лучший judge'ом
+    candidates_per_task: 3
+    judge_metric: heuristic  # heuristic | clip | vlm
+  knn_warm:
+    enabled: true
+    # Для новых объектов — retrieval из тренировочных эпизодов по CLIP
+    k: 4
+    use_clip: false  # true требует open_clip, false = histogram fallback
+  polish:
+    enabled: true
+    iterations: 2
+    # Координатный спуск по худшим примерам (аналог polish_worst.py)
+  lottery:
+    enabled: false  # массовый рандом-поиск шаблонов, только для оффлайн-оптимизации
+    seeds: 1000
+  # Оффлайн VLM (если endpoint доступен)
+  vlm:
+    enabled: false
+    endpoints: ["http://localhost:8001"]
+    model: null
+    max_concurrency: 2
+    timeout_s: 30
+  # Локальный captioner (темплейты vs маленький LLM)
+  caption_mode: template  # template | local_llm
+  local_llm: HuggingFaceTB/SmolLM2-360M-Instruct  # если caption_mode=local_llm
+
+quality:
+  # Фильтры как в ESPADA BPC
+  min_caption_len: 20
+  max_caption_len: 800
+  max_boxes_per_image: 50
+  max_points_per_image: 50
+  forbidden_phrases: ["as an AI", "I cannot see", "unable to determine"]
+  # Judge (эвристический) — аналог QAOA per-instance merge
+  judge:
+    enabled: true
+    min_score: 0.4  # отбрасывать примеры хуже порога
+    weights:
+      length: 0.15
+      spatial_terms: 0.25
+      object_diversity: 0.20
+      instruction_coverage: 0.20
+      uniqueness: 0.20
+
+deduplication:
+  enabled: true
+  # Дедуп по хэшу question+image
+  hash_question: true
+  # Дедуп по CLIP-эмбеддингам (если enabled)
+  embedding_threshold: 0.92
+
+logging:
+  level: INFO
+  progress_every: 100

@@ -1,0 +1,43 @@
+# Participant Score self-check (8 VLM benches + libero_spatial).
+# Paths are relative to the repo root unless absolute.
+#
+# One-time setup (public GitHub lmms-eval + in-repo overlay + FlagEval/ERQA):
+#   ./scripts/setup_score_selfcheck.sh
+#
+# Then:
+#   export API_TYPE=dummy MUJOCO_GL=egl
+#   ./scripts/run_score_selfcheck.sh \
+#     --submission runs/<run>/submission \
+#     --config configs/selfcheck_score.example.yaml
+#
+# Self-check VLA: vanilla libero_spatial.
+# Formula matches the judge: Score = 100 * (0.4 * VLM + 0.6 * VLA).
+# Official leaderboard VLA protocol is separate (judge-only; not documented here).
+
+paths:
+  # Populated by ./scripts/setup_score_selfcheck.sh
+  # Public EvolvingLMMs-Lab/lmms-eval + in-repo overlay (no private GitLab).
+  lmms_eval: third_party/lmms-eval
+  lmms_python: third_party/lmms-eval/.venv/bin/python
+  # FlagEval/ERQA → scripts/prepare_erqa.py → data/erqa_converted
+  erqa_data_dir: data/erqa_converted
+
+runtime:
+  gpu_indices: [0]
+  # Where to write vlm_benches/ + libero_spatial/ + summary/
+  # Default: <submission>/../score_selfcheck  or <submission>/score_selfcheck
+  output_root: null
+
+vlm:
+  suite: configs/greenvla_vlm_tasks.yaml
+  model: smolvlm2
+  batch_size: 1
+  # null = full benches; set e.g. 5 for a quick smoke
+  limit: null
+  exclude_erqa: false
+
+vla:
+  suite: libero_spatial
+  task_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  episodes_per_task: 1
+  seed: 1000

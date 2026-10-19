@@ -1,0 +1,46 @@
+# Participant / organizer self-check VLM suite (same 8 benches as the closed leaderboard).
+# Score uses primary accuracy per task — see scripts/compute_leaderboard_score.py.
+# Requires cv-team lmms-eval (branch dev) with run_many_tasks.py.
+
+suite_name: greenvla_vlm_tasks
+
+task_aliases:
+  crosspoint: crosspoint_bench
+
+env: {}
+
+tasks_process_with_media: []
+
+tasks:
+  - blink
+  - crosspoint
+  - embspatial
+  - erqa
+  - mmmu_val
+  - mmmu_pro_standard
+  - mmmu_pro_vision
+  - msmu
+
+default:
+  batch_size: 1
+  limit: null
+  num_fewshot: 0
+  log_samples: true
+
+task_overrides:
+  blink:
+    batch_size: 1
+  crosspoint:
+    batch_size: 1
+  embspatial:
+    batch_size: 1
+  erqa:
+    batch_size: 1
+  mmmu_val:
+    batch_size: 1
+  mmmu_pro_standard:
+    batch_size: 1
+  mmmu_pro_vision:
+    batch_size: 1
+  msmu:
+    batch_size: 1

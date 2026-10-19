@@ -1,0 +1,100 @@
+name: Pack starter kit
+
+# Собирает starter-kit.zip (kit + фабрика + инструкция) и публикует в релиз
+# starter-kit-v1 — прямая ссылка для скачивания.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/8c48778b-vision-action-data-factory
+    paths:
+      - '.github/workflows/pack-starter-kit.yml'
+      - 'starter/**'
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/8c48778b-vision-action-data-factory
+          fetch-depth: 1
+
+      - name: Build starter-kit.zip
+        run: |
+          python3 - <<'PY'
+          import os, zipfile
+          ws = os.environ['GITHUB_WORKSPACE']
+          out = 'starter-kit.zip'
+          skip_dirs = ('.git', 'submission_parts', '.github', 'runs',
+                       '__pycache__', '.factory_cache', '.venv')
+          skip_files = ('baseline.zip', 'participant.zip', 'IMPROVE.md')
+
+          with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
+              # инструкция в корень архива
+              z.write(os.path.join(ws, 'starter', 'START_HERE.txt'), 'START_HERE.txt')
+              # документация
+              for f in ('IMPROVE.md', 'README.md', 'generate_dataset.py',
+                        'config.yaml', 'requirements.txt'):
+                  z.write(os.path.join(ws, f), f)
+              # src/ фабрики
+              for root, dirs, names in os.walk(os.path.join(ws, 'src')):
+                  dirs[:] = [d for d in dirs if d != '__pycache__']
+                  for n in sorted(names):
+                      if n.endswith('.py'):
+                          full = os.path.join(root, n)
+                          z.write(full, os.path.relpath(full, ws))
+              # стартовый kit целиком
+              kit = os.path.join(ws, 'aij_robotics-main')
+              for root, dirs, names in os.walk(kit):
+                  dirs[:] = [d for d in dirs if d not in skip_dirs]
+                  for n in sorted(names):
+                      if n.endswith(('.pyc', '.log')):
+                          continue
+                      full = os.path.join(root, n)
+                      arc = os.path.relpath(full, ws)
+                      if arc == 'aij_robotics-main/configs/participant.yaml':
+                          z.write(os.path.join(ws, 'starter', 'participant.yaml'), arc)
+                      else:
+                          z.write(full, arc)
+              # установочный скрипт без Docker — в корень kit'а
+              z.write(os.path.join(ws, 'starter', 'setup_wsl_nodocker.sh'),
+                      'aij_robotics-main/setup_wsl_nodocker.sh')
+          size = os.path.getsize(out)
+          print(f'starter-kit.zip: {size} bytes')
+          assert 100_000 < size < 100_000_000, f'unexpected size {size}'
+          with zipfile.ZipFile(out) as z:
+              names = z.namelist()
+              assert 'START_HERE.txt' in names
+              assert 'IMPROVE.md' in names
+              assert 'aij_robotics-main/scripts/run_pipeline.sh' in names
+              assert 'aij_robotics-main/configs/participant.yaml' in names
+              assert 'aij_robotics-main/setup_wsl_nodocker.sh' in names
+              print(f'{len(names)} entries')
+              # participant.yaml — наш готовый
+              assert b'team_v1' in z.read('aij_robotics-main/configs/participant.yaml')
+          PY
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="starter-kit-v1"
+          REPO="${{ github.repository }}"
+          if ! gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$REPO" \
+              --title "Starter kit — этап 1 (обучение VLA)" \
+              --notes "starter-kit.zip: aij_robotics kit + фабрика + START_HERE.txt. Инструкция: файл START_HERE.txt внутри архива (и IMPROVE.md, раздел 6)."
+          fi
+          gh release upload "$TAG" starter-kit.zip -R "$REPO" --clobber
+          echo "https://github.com/$REPO/releases/download/$TAG/starter-kit.zip" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary
+        run: |
+          echo "## Starter kit" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Прямая ссылка:** https://github.com/${{ github.repository }}/releases/download/starter-kit-v1/starter-kit.zip" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,52 @@
+### model
+# Smoke / local check — short LoRA + smaller images (free to edit).
+model_name_or_path: HuggingFaceTB/SmolVLM2-500M-Video-Instruct
+image_max_pixels: 65536
+video_max_pixels: 16384
+video_fps: 2.0
+video_maxlen: 64
+trust_remote_code: true
+flash_attn: disabled
+
+### method
+stage: sft
+do_train: true
+do_eval: false
+finetuning_type: lora
+lora_rank: 8
+lora_alpha: 16
+lora_dropout: 0.05
+lora_target: all
+freeze_vision_tower: true
+freeze_multi_modal_projector: true
+disable_gradient_checkpointing: true
+deepspeed: false
+
+### dataset
+template: smolvlm2
+cutoff_len: 2048
+overwrite_cache: true
+preprocessing_num_workers: 2
+dataloader_num_workers: 0
+
+### output
+logging_steps: 1
+save_strategy: steps
+save_steps: 500
+plot_loss: true
+overwrite_output_dir: true
+save_only_model: false
+report_to: none
+
+### train
+seed: 42
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 1
+learning_rate: 1.0e-4
+num_train_epochs: 1.0
+warmup_ratio: 0.03
+lr_scheduler_type: cosine
+weight_decay: 0.0
+max_grad_norm: 1.0
+bf16: true
+ddp_timeout: 180000000

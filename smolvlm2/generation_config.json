@@ -1,0 +1,4 @@
+{
+  "chat_format": "chatml",
+  "max_new_tokens": 256
+}

@@ -1,0 +1,18 @@
+stages:
+  - verify
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+precommit:
+  stage: verify
+  image: python:3.11
+  before_script:
+    - python -V
+    - pip install uv
+    - uv venv --seed
+    - .venv/bin/pip install pre-commit
+  script:
+    - .venv/bin/python -m pre_commit run --all-files --show-diff-on-failure

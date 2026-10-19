@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "espada-bpc"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[project.scripts]
+espada-bpc = "espada_bpc:cli"
+
+[tool.setuptools]
+py-modules = ["espada_bpc", "runner"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src", "src.*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "-ra -q"
+markers = [
+    "unit: fast pure-logic tests, no heavy deps (always runnable)",
+    "needs_cv2: requires opencv-python (cv2)",
+    "needs_pandas: requires pandas",
+    "needs_torch: requires torch/ultralytics/transformers",
+    "smoke: end-to-end pipeline with mocked models and VLM",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

@@ -1,0 +1,22 @@
+# Готовый конфиг этапа 1 (уже настроен под команды из START_HERE.txt).
+# Пути — ВНУТРИ контейнера; наружу монтируются через docker run -v.
+
+run_name: team_v1
+
+vlm:
+  # Заглушка данных: VLM на этапе 1 НЕ обучаем (используем --vlm-checkpoint),
+  # поэтому достаточно любого валидного ShareGPT-файла из стартового kit.
+  protocol: full
+  data_path: /data/vlm/l1_train_5.jsonl
+  eval_data_path: null
+  media_dir: /data/vlm
+
+vla:
+  suite: libero
+  dataset_dir: /data/vla
+
+runtime:
+  gpu_indices: [0]
+  output_root: /workspace/runs
+  cache_dir: /workspace/cache/core
+  lerobot_home: /workspace/cache/lerobot

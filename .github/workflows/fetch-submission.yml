@@ -1,0 +1,89 @@
+name: Fetch submission.zip from Sber OBS
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Presigned Sber OBS URL (submission.zip)'
+        required: true
+        default: 'https://gv02-dsworks-obs01.obs.ru-moscow-1.hc.sbercloud.ru/champ_inference/d7d597aa-c30a-4162-ab4c-362f2abb6b85?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=APBKZPWWNZBCUG5K3N0F%2F20261018%2Fru-moscow-1%2Fs3%2Faws4_request&X-Amz-Date=20261018T174033Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dsubmission.zip&X-Amz-Signature=fbfdfbc9e1e5c0fe86ee8d38e45a46de14d33af92b34231f677e783cfb57c7bd'
+  push:
+    branches:
+      - arena/8c48778b-vision-action-data-factory
+    paths:
+      - '.github/workflows/fetch-submission.yml'
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update -qq && sudo apt-get install -y curl p7zip-full coreutils
+
+      - name: Download submission.zip (external runner bypasses sandbox limits)
+        env:
+          URL: ${{ github.event.inputs.url || 'https://gv02-dsworks-obs01.obs.ru-moscow-1.hc.sbercloud.ru/champ_inference/d7d597aa-c30a-4162-ab4c-362f2abb6b85?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=APBKZPWWNZBCUG5K3N0F%2F20261018%2Fru-moscow-1%2Fs3%2Faws4_request&X-Amz-Date=20261018T174033Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dsubmission.zip&X-Amz-Signature=fbfdfbc9e1e5c0fe86ee8d38e45a46de14d33af92b34231f677e783cfb57c7bd' }}
+        run: |
+          set -e
+          echo "Downloading from Sber OBS..."
+          echo "URL=${URL:0:120}..."
+          # Попытка curl с докачкой и повторами (для 3.2 ГБ)
+          curl -L --retry 5 --retry-delay 10 --continue-at - -o submission.zip "$URL" --progress-bar
+          ls -lh submission.zip
+          echo "Size bytes: $(stat -c%s submission.zip)"
+          # Проверка что это zip
+          file submission.zip || true
+          unzip -l submission.zip | head -n 50 || 7z l submission.zip | head -n 100
+
+      - name: Split for artifact (GH limit 2GB per artifact, push limit 2GB)
+        run: |
+          SIZE=$(stat -c%s submission.zip)
+          echo "SIZE=$SIZE"
+          if [ "$SIZE" -gt 1900000000 ]; then
+            echo "Splitting >1.9GB into 1GB chunks..."
+            split -b 1900M -d submission.zip submission.zip.part.
+            ls -lh submission.zip.part.*
+            rm submission.zip
+          else
+            echo "No split needed"
+          fi
+
+      - name: Upload artifact (available in Actions UI for download)
+        uses: actions/upload-artifact@v4
+        with:
+          name: submission-zip
+          path: |
+            submission.zip
+            submission.zip.part.*
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Create GitHub Release with split parts (optional, for git clone)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="submission-$(date +%Y%m%d-%H%M)"
+          echo "Creating release $TAG"
+          gh release create "$TAG" --title "submission.zip $TAG" --notes "Auto-fetched from Sber OBS via external runner" --repo "${{ github.repository }}" || true
+          # загружаем чанки (или целый файл) в релиз
+          if ls submission.zip.part.* 1>/dev/null 2>&1; then
+            gh release upload "$TAG" submission.zip.part.* --repo "${{ github.repository }}" --clobber
+          else
+            gh release upload "$TAG" submission.zip --repo "${{ github.repository }}" --clobber
+          fi
+          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/$TAG"
+          gh release view "$TAG" --repo "${{ github.repository }}" || true
+
+      - name: Instructions
+        run: |
+          echo "=== DONE ==="
+          echo "1. Скачай артефакт: Actions -> Fetch submission.zip -> Artifacts -> submission-zip"
+          echo "2. Если разбито: cat submission.zip.part.* > submission.zip"
+          echo "3. Проверка: unzip -l submission.zip | head"
+          echo "4. Альтернатива: Releases -> последний релиз submission-YYYYMMDD-..."

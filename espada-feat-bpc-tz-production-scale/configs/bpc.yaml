@@ -1,0 +1,72 @@
+input:
+  require_prepared_images: true
+  allowed_extensions: [".jpg", ".jpeg"]
+  require_rgb: true
+  max_side: 768
+
+yolo:
+  workers: 1
+  batch_size: 16
+  devices: ["cuda:0"]
+  model: yolov8m.pt
+
+sam2:
+  workers: 1
+  batch_size: 8
+  devices: ["cuda:0"]
+  dtype: bfloat16
+  empty_cache: true
+
+vlm:
+  # workers is auto-scaled up to (len(endpoints) * max_concurrency_per_endpoint)
+  # at runtime so all Qwen endpoints stay saturated. Set higher to oversubscribe.
+  workers: 8
+  # List ALL Qwen endpoints here — requests are spread round-robin across them
+  # with per-endpoint concurrency caps and automatic cooldown on failures.
+  endpoints:
+    - "http://odie3.frontierai.ru:7080"
+    # - "http://qwen-2:8001"
+    # - "http://qwen-3:8001"
+  # Each Qwen with 32 threads can typically take this many concurrent requests.
+  max_concurrency_per_endpoint: 2
+  model: null  # reads MODEL_VLM env var if null
+  timeout_s: 60
+
+judge:
+  enabled: true
+  tasks: ["bboxing", "pointing"]
+  workers: 4
+  endpoints:
+    - "http://odie4.frontierai.ru:7080"
+  max_concurrency_per_endpoint: 2
+  allowed_edits: ["labels"]
+  forbid_coordinate_changes: true
+
+validation:
+  bbox:
+    out_of_bounds_policy: "reject"   # "reject" | "clip"
+    min_box_area_px: 4
+    max_boxes_per_image: 100
+  pointing:
+    out_of_bounds_policy: "reject"
+    require_point_inside_related_bbox: false
+    max_points_per_image: 100
+  captions:
+    min_length: 5
+    max_length: 1000
+    forbidden_phrases:
+      - "I cannot see the image"
+      - "as an AI model"
+      - "unable to determine"
+
+retry:
+  max_attempts: 3
+  backoff_seconds: 30
+
+storage:
+  save_raw_vlm_responses: false
+  save_yolo_outputs: false
+  save_sam2_outputs: false
+  save_invalid_outputs: false
+  save_validated_copies: false
+  save_visualizations: true

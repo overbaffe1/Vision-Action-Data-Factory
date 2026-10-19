@@ -1,0 +1,17 @@
+.git
+.gitignore
+runs/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/*.egg-info/
+**/outputs/
+**/logs/
+configs/participant.yaml
+configs/participant.dryrun.yaml
+*.md
+!README.md
+.env
+.cursor/

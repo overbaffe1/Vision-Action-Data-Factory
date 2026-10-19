@@ -1,0 +1,22 @@
+# Smoke config (Docker mounts from README).
+# Host: mount examples/smoke → /data/vlm and examples/smoke/libero_mini → /data/vla
+#   ./scripts/run_pipeline.sh configs/smoke.yaml --smoke
+#   ./scripts/run_smoke.sh
+
+run_name: smoke_libero
+
+vlm:
+  protocol: full
+  data_path: /data/vlm/l1_train_5.jsonl
+  eval_data_path: /data/vlm/l1_val_2.jsonl
+  media_dir: /data/vlm
+
+vla:
+  suite: libero
+  dataset_dir: /data/vla
+
+runtime:
+  gpu_indices: [0]
+  output_root: /workspace/runs
+  cache_dir: /workspace/cache/core
+  lerobot_home: /workspace/cache/lerobot

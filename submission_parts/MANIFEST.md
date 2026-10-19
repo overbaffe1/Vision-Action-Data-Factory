@@ -1,0 +1,89 @@
+# submission.zip — сборка из частей
+
+Сборка `submission.zip` из чанков `part_00..part_34` (каждый < 100 МиБ, лимит GitHub на файл).
+
+## Быстрая сборка
+
+```bat
+:: Windows (CMD), из папки submission_parts:
+reassemble.bat
+```
+
+```bash
+# Linux / macOS / Git Bash:
+./reassemble.sh
+# или вручную:
+cat submission_parts/part_* > submission.zip
+```
+
+## Контрольные суммы
+
+ZIP_MD5 `7d6a347bb62b518832bd119302632149` (полный размер 3454733203 байт)
+
+### Чанки (md5)
+
+```
+95ff39b45979145d1e1c7f0f3f608a25  part_0000
+5869c1e2f4730873487f7bfb93a0e763  part_0001
+28bfaba25f061780ac9febee8e2b469c  part_0002
+b84204a1431c72c0ba65efa455189cfb  part_0003
+eb79678bb72ce2c8638dc47ad031509e  part_0004
+8c240487cf17c9dcea2e0a3ce38d87aa  part_0005
+25ccc2ae99b58d433fde8bb655ce1cd6  part_0006
+4e3a4f0cc8c11569a79d92e817efa0ef  part_0007
+ef732ebe061d39826bde982ab938dd32  part_0008
+a563c97a0958e25e8c84d5b467302e1b  part_0009
+c8f6f15ee7d6129bf5be4502d6a02d80  part_0010
+90ef5befffec1dfa130b519c90b66660  part_0011
+9f27bd971211d8ced245eaeb80da9db9  part_0012
+f58537d35ea4e5e6fa7e31039c8aaece  part_0013
+88ff36a710c55ae153911073284f7712  part_0014
+e2dcb2cd1528acfaaa17f772899172ee  part_0015
+d8359801ba47b621ac5e5d05dbae5fb1  part_0016
+3dac1614b6b01f761ee41ed8b1b9acf5  part_0017
+98b12d4eb22db9b83c8e73b63bc3c9fb  part_0018
+a07032e52d892cced8ffe55e90a33ad8  part_0019
+648d7f0b6dfa2679a997d15a404f8062  part_0020
+39e64b5b93d2858787f299d1a8e4d07e  part_0021
+8a27c78f3f881f4a35fbb266c28a46e1  part_0022
+46bdff2f8d2f0b9d90f51141909ea567  part_0023
+2a2a3b88fb1b540c5fef51c7a552c46e  part_0024
+56480983a9a539f23fbf0ec66b8870a5  part_0025
+5f8af5819bf157bae9fd3235224679bf  part_0026
+676a3c4b8d2cd5a0f456c34d9dd1ad05  part_0027
+bf1c089ba4aeea3e69fe847976662b26  part_0028
+134efa4385298e330a633d49e07b0b04  part_0029
+040ca574d37251db37e899691f15c4a9  part_0030
+47505b4ac4a0f7a8a4c0369d02385d8e  part_0031
+01ba1ca39be107d533a29d4f6f93b7b0  part_0032
+278430dac18cb5b4da2af4a703cf488c  part_0033
+29c2b8ab871089cdf38e4f28c191c2a1  part_0034
+```
+
+## Содержимое submission.zip
+
+```
+         138  README.md
+        2264  action_expert/config.json
+  1421156008  action_expert/model.safetensors
+         660  action_expert/policy_postprocessor.json
+        7668  action_expert/policy_postprocessor_step_0_unnormalizer_processor.safetensors
+        2361  action_expert/policy_preprocessor.json
+        7668  action_expert/policy_preprocessor_step_5_normalizer_processor.safetensors
+        6450  action_expert/train_config.json
+          63  annotations.jsonl
+          84  config.yaml
+         176  generate_dataset.py
+          75  requirements.txt
+         403  smolvlm2/chat_template.jinja
+        4293  smolvlm2/config.json
+         135  smolvlm2/generation_config.json
+  2029990624  smolvlm2/model.safetensors
+        1619  smolvlm2/processor_config.json
+     3548471  smolvlm2/tokenizer.json
+         897  smolvlm2/tokenizer_config.json
+          63  src/__init__.py
+         123  src/pipeline.py
+```
+
+Полный листинг: [zip_listing.txt](zip_listing.txt)

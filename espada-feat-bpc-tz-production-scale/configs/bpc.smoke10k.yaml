@@ -1,0 +1,97 @@
+input:
+  require_prepared_images: true
+  allowed_extensions: [".jpg", ".jpeg"]
+  require_rgb: true
+  max_side: 768
+
+yolo:
+  workers: 1
+  batch_size: 16
+  devices: ["cuda:0"]
+  model: yolov8m.pt
+
+sam2:
+  # >1 does NOT parallelize GPU compute (one GPU, calls serialize behind a
+  # lock around set_image+predict_from_boxes since Sam2Segmenter mutates
+  # shared state) — it exists so a full vlm_queue (e.g. a saturated VLM
+  # endpoint) can block ONE SAM2 thread without freezing pointing output
+  # entirely, which is what happened with workers=1 on the first live run
+  # (bboxing/captions kept progressing, pointing stuck at 0/1000).
+  workers: 3
+  batch_size: 8
+  devices: ["cuda:0"]
+  dtype: bfloat16
+  empty_cache: true
+
+vlm:
+  # Router deployment: ONE url (gateway), backend instances selected by
+  # model name. API_TOKEN comes from .env.
+  #
+  # IMPORTANT: max_concurrency_per_endpoint is PER GPU PROCESS. With 4 GPU
+  # processes each building its own EndpointPool, the effective concurrency
+  # a backend sees is 4x this value. The earlier cap=16 therefore hit each
+  # model with up to 64 concurrent heavy (2-image) requests -- measured
+  # probe capacity (scripts/probe_endpoints.py, 2026-07-02) shows odie2/
+  # odie7 sustain 64 concurrent LIGHT requests at p95 2.7-4.7s, so heavy
+  # pipeline prompts at that level explain the 60s read timeouts. cap=8
+  # -> 32 effective per model, safely inside measured capacity.
+  #
+  # odie6 and odie8 REMOVED 2026-07-02: probe showed instant HTTP 404
+  # (litellm.NotFoundError -- backend not registered/down). Re-probe before
+  # re-adding:
+  #   python scripts/probe_endpoints.py --base-url https://gateway.frontierai.ru \
+  #     --models qwen3.5-4b-odie6,qwen3.5-4b-odie8 --levels 4,16,64
+  workers: 16  # == 2 models * 8 cap; auto-scale sets this anyway
+  router_url: "https://gateway.frontierai.ru"
+  models:
+    - "qwen3.5-4b-odie2"
+    - "qwen3.5-4b-odie7"
+    # - "qwen3.5-4b-odie6"  # DEAD (404) as of 2026-07-02, re-probe first
+    # - "qwen3.5-4b-odie8"  # DEAD (404) as of 2026-07-02, re-probe first
+  max_concurrency_per_endpoint: 8
+  timeout_s: 60
+
+judge:
+  enabled: true
+  tasks: ["bboxing", "pointing"]
+  # Probe (2026-07-02): both judge models are FAST -- 100% success at 64
+  # concurrent light requests, p95 ~1.1-1.3s, ~77 RPS each. Same 4x
+  # per-process multiplier applies: cap=16 -> 64 effective per model,
+  # matching the highest healthy probed level.
+  workers: 32  # == 2 models * 16 cap
+  router_url: "https://gateway.frontierai.ru"
+  models:
+    - "test-earth"
+    - "qwen-3.5-30b"
+  max_concurrency_per_endpoint: 16
+  allowed_edits: ["labels"]
+  forbid_coordinate_changes: true
+
+validation:
+  bbox:
+    out_of_bounds_policy: "reject"
+    min_box_area_px: 4
+    max_boxes_per_image: 100
+  pointing:
+    out_of_bounds_policy: "reject"
+    require_point_inside_related_bbox: false
+    max_points_per_image: 100
+  captions:
+    min_length: 5
+    max_length: 1000
+    forbidden_phrases:
+      - "I cannot see the image"
+      - "as an AI model"
+      - "unable to determine"
+
+retry:
+  max_attempts: 3
+  backoff_seconds: 30
+
+storage:
+  save_raw_vlm_responses: false
+  save_yolo_outputs: false
+  save_sam2_outputs: false
+  save_invalid_outputs: false
+  save_validated_copies: false
+  save_visualizations: true

@@ -1,0 +1,107 @@
+input:
+  require_prepared_images: true
+  allowed_extensions: [".jpg", ".jpeg"]
+  require_rgb: true
+  max_side: 768
+
+yolo:
+  workers: 1
+  batch_size: 16
+  devices: ["cuda:0"]
+  model: yolov8m.pt
+
+sam2:
+  workers: 3
+  batch_size: 8
+  devices: ["cuda:0"]
+  dtype: bfloat16
+  empty_cache: true
+
+vlm:
+  # Direct backend mode: every target is addressed explicitly instead of
+  # going through the shared router. H100 targets get a slightly higher
+  # per-process cap than A100 targets.
+  #
+  # IMPORTANT: caps are PER GPU PROCESS. On 1 node x 4 GPUs = 4 processes,
+  # an H100 cap=16 means ~64 concurrent requests to that backend, and an
+  # A100 cap=8 means ~32 concurrent requests to that backend.
+  targets:
+    - base_url: "http://jupiter.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 16
+    - base_url: "http://earth.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 16
+    - base_url: "http://odie4.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 16
+    - base_url: "http://odie3.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 16
+    - base_url: "http://odie9.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 16
+    - base_url: "http://garfield4.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 16
+    - base_url: "http://odie2.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 8
+    - base_url: "http://odie6.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 8
+    - base_url: "http://odie7.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 8
+    - base_url: "http://odie8.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 8
+    - base_url: "http://odie10.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 8
+    - base_url: "http://odie11.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 8
+    - base_url: "http://odie12.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 8
+    - base_url: "http://odie13.frontierai.ru:7080"
+      model: "Qwen3.5-4B-FP8"
+      max_concurrency: 8
+  workers: 160
+  timeout_s: 60
+
+judge:
+  enabled: false
+  tasks: ["bboxing", "pointing"]
+  workers: 0
+  endpoints: []
+
+validation:
+  bbox:
+    out_of_bounds_policy: "reject"
+    min_box_area_px: 4
+    max_boxes_per_image: 100
+  pointing:
+    out_of_bounds_policy: "reject"
+    require_point_inside_related_bbox: false
+    max_points_per_image: 100
+  captions:
+    min_length: 5
+    max_length: 1000
+    forbidden_phrases:
+      - "I cannot see the image"
+      - "as an AI model"
+      - "unable to determine"
+
+retry:
+  max_attempts: 3
+  backoff_seconds: 30
+
+storage:
+  save_raw_vlm_responses: false
+  save_yolo_outputs: false
+  save_sam2_outputs: false
+  save_invalid_outputs: false
+  save_validated_copies: false
+  save_visualizations: true

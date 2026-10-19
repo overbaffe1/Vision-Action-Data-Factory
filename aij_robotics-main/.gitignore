@@ -1,0 +1,20 @@
+runs/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+*.egg-info/
+# Large local caches / HF slices (regenerate with scripts)
+cache/
+examples/smoke/libero_hf_slice/
+
+# Score self-check: cloned deps + downloaded benchmarks (see scripts/setup_score_selfcheck.sh)
+third_party/lmms-eval/
+data/erqa_converted/
+configs/selfcheck_score.yaml
+
+# Local smoke outputs / caches (regenerate with vendor_deps / setup_env)
+third_party/**/.venv/
+third_party/**/outputs/
+third_party/**/logs/

@@ -1,0 +1,10 @@
+./MANIFEST.txt
+./lmms_eval/models/simple/smolvlm2.py
+./lmms_eval/tasks/erqa/_default_template_yaml
+./lmms_eval/tasks/erqa/convert_erqa.py
+./lmms_eval/tasks/erqa/erqa.yaml
+./lmms_eval/tasks/erqa/utils.py
+./lmms_eval/tasks/msmu/_default_template_yaml
+./lmms_eval/tasks/msmu/msmu.yaml
+./lmms_eval/tasks/msmu/utils.py
+./scripts/run_many_tasks.py

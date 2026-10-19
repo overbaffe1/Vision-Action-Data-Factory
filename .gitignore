@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+# Data caches
+data/demo/
+data/raw/
+data/processed_images/
+.aij_cache/
+.factory_cache/
+runs/
+outputs/
+logs/
+*.log
+# Large weights — via LFS if needed
+# *.zip
+# *.safetensors
+# *.bin
+# Собранный из submission_parts/ zip не коммитим целиком
+/submission.zip
+# OS
+.DS_Store
+Thumbs.db
+# Но submission требует эти файлы — не игнорим их в submission branch
+!smolvlm2/
+!action_expert/
+!annotations.jsonl
+!config.yaml
+!generate_dataset.py
