@@ -156,3 +156,135 @@ Zip: **только эти 4 пункта, ≤5 ГБ, без датасетов/
 
 Официальный протокол VLA судьи закрыт (self-check — `libero_spatial`), поэтому
 цифру обещать нельзя, но разрыв «10 шагов vs 30000» — это основной вклад.
+
+## 6. Windows: пошаговый запуск (WSL2 + Docker)
+
+Сборка/обучение идут в **Linux-окружении** (LIBERO/EGL на чистом Windows не
+работают) — поэтому WSL2. Репозиторий держим **в ext4 WSL (`~/…`), не в
+`/mnt/c/…`** (иначе I/O убьёт обучение).
+
+### 6.1 Разовая установка (PowerShell от администратора)
+
+```powershell
+wsl --install -d Ubuntu        # перезагрузка, создать логин/пароль
+```
+
+1. Драйвер NVIDIA **на Windows** (сверять с моделью карты; для RTX 50xx нужен
+   свежий драйвер — в образе CUDA 12.8).
+2. [Docker Desktop](https://www.docker.com/products/docker-desktop/) → Settings →
+   **Use WSL 2 engine** → Apply → включить интеграцию с дистрибутивом Ubuntu.
+3. Проверка в терминале Ubuntu (WSL):
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu22.04 nvidia-smi
+```
+
+Если здесь видны CUDA/карта — ок. (`nvidia-smi` в самом WSL без драйвера на
+хосте может не работать — главное GPU внутри контейнера.)
+
+### 6.2 Клон репозиторий (всё уже внутри)
+
+```bash
+cd ~ && git clone -b arena/8c48778b-vision-action-data-factory \
+  https://github.com/overbaffe1/Vision-Action-Data-Factory.git
+cd Vision-Action-Data-Factory
+# aij_robotics-main/ — стартовый kit (обучение, валидация, self-check)
+# generate_dataset.py, config.yaml, src/ — фабрика аннотаций
+```
+
+### 6.3 Данные (нужен доступ к huggingface.co)
+
+```bash
+mkdir -p ~/data && pip install -U "huggingface_hub[cli]"
+
+# VLA: полный LIBERO v3.0 (1693 эпизода)
+huggingface-cli download HuggingFaceVLA/libero --repo-type dataset \
+  --revision v3.0 --local-dir ~/data/HuggingFaceVLA-libero-v3
+
+# VLM: 4 разрешённых источника (коммиты зафиксированы в ТЗ)
+huggingface-cli download nvidia/BridgeData2_LeRobot_v3 --repo-type dataset \
+  --revision b96f721 --local-dir ~/data/vlm_sources/BridgeData2
+huggingface-cli download BrunoM42/fractal20220817_data_lerobot --repo-type dataset \
+  --revision fc006b5 --local-dir ~/data/vlm_sources/fractal20220817
+huggingface-cli download tailong-wu/language_table_lerobot_v30 --repo-type dataset \
+  --revision d54542e --local-dir ~/data/vlm_sources/language_table
+huggingface-cli download builddotai/Egocentric-100K --repo-type dataset \
+  --revision fAE604b --local-dir ~/data/vlm_sources/Egocentric-100K
+```
+
+Генерация аннотаций (фабрика, CPU, детерминированно при фиксированном seed):
+
+```bash
+cd ~/Vision-Action-Data-Factory
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python generate_dataset.py --input ~/data/vlm_sources \
+  --output ~/data/vlm/annotations.jsonl --config config.yaml
+```
+
+(`--input` — одна корневая папка: лоадер рекурсивно находит `meta/info.json`
+всех четырёх источников; пути картинок в JSONL будут относительно неё.)
+
+### 6.4 Конфиг и обучение
+
+`aij_robotics-main/configs/participant.yaml`:
+
+```yaml
+run_name: team_real
+vlm:
+  data_path: /data/vlm/annotations.jsonl
+  media_dir: /data/vlm_sources
+vla:
+  suite: libero
+  dataset_dir: /data/vla
+runtime:
+  gpu_indices: [0]
+  output_root: /workspace/runs
+```
+
+`configs/vla_libero.yaml` — правки из §4.2 (`save_freq: 2500`, при OOM —
+`batch_size: 2`). Сборка образа и запуск:
+
+```bash
+cd ~/Vision-Action-Data-Factory/aij_robotics-main
+docker build -t aij-robotics:latest .     # долго (CUDA + torch + hf-libero)
+
+# сначала dry-run — проверка путей
+docker run --rm -v "$PWD/configs:/workspace/configs:ro" \
+  -v ~/data/vlm_sources:/data/vlm_sources:ro \
+  -v ~/data/vlm:/data/vlm:ro -v ~/data/HuggingFaceVLA-libero-v3:/data/vla:ro \
+  -v "$PWD/runs:/workspace/runs" \
+  aij-robotics:latest ./scripts/run_pipeline.sh configs/participant.yaml --dry-run
+
+# полное обучение VLM + VLA (часы; --skip-vlm / --skip-vla — по частям)
+docker run --gpus all --rm --shm-size=8g \
+  -e CUDA_HOME=/usr/local/cuda -e MUJOCO_GL=egl \
+  -v "$PWD/configs:/workspace/configs:ro" \
+  -v ~/data/vlm_sources:/data/vlm_sources:ro \
+  -v ~/data/vlm:/data/vlm -v ~/data/HuggingFaceVLA-libero-v3:/data/vla \
+  -v "$PWD/runs:/workspace/runs" \
+  -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+  aij-robotics:latest ./scripts/run_pipeline.sh configs/participant.yaml
+```
+
+Пайплайн сам соберёт `runs/<run>/submission/` (smolvlm2/ + action_expert/ +
+metadata.json + participant.yaml).
+
+### 6.5 Отбор чекпоинта, проверка, упаковка, загрузка
+
+```bash
+# после окончания — самопроверка VLA (см. §4.3, чекпоинты по save_freq)
+SUITE=libero_spatial TASK_IDS='[0,1,2,3,4,5,6,7,8,9]' N_EPISODES=1 SEED=1000 \
+  MUJOCO_GL=egl ./scripts/run_libero_selfcheck.sh runs/<run>/submission
+
+./scripts/validate_submission.sh runs/<run>/submission
+
+# zip: ТОЛЬКО содержимое submission/ (4 пункта), без runs/логов/данных
+cd runs/<run>/submission && zip -r ../submission.zip . && cd ..
+ls -lh submission.zip          # обязано быть ≤ 5 ГБ
+md5sum submission.zip
+```
+
+Загрузка `submission.zip` в форму «загрузка решения» напрямую с машины (на ней
+нормальный канал). Если не пройдёт по каналу — скажите: соберём через наш
+`push-parts-to-git.yml` → релиз с 2 частями (как раньше).
