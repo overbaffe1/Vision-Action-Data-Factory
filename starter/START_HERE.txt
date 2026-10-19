@@ -1,55 +1,47 @@
 ============================================================
 СТАРТ — ЭТАП 1: улучшить VLA-скор (обучить action_expert)
 ============================================================
-Подробный разбор: см. IMPROVE.md (раздел 6 — Windows пошагово).
-Ниже — минимальный набор: скачать 4 вещи и вставить команды по порядку.
+Два варианта:  А — с Docker,  Б — БЕЗ Docker (просто стек в WSL).
+Нужен только WSL2 в обоих случаях (симулятор LIBERO — Linux-ный;
+kit — bash-скрипты; на чистом Windows без WSL не заработает).
+Подробный разбор: IMPROVE.md, раздел 6.
 
-ЧТО ВНУТРИ ЭТОГО АРХИВА
-  aij_robotics-main/            — стартовый kit: обучение, валидация, self-check
-  generate_dataset.py, src/,    — фабрика аннотаций (нужна на ЭТАПЕ 2,
-  config.yaml, requirements.txt    когда будем дообучать VLM — сейчас не трогаем)
-  IMPROVE.md                    — диагноз и полный план улучшения
+ЧТО ВНУТРИ АРХИВА
+  aij_robotics-main/            — стартовый kit
+    setup_wsl_nodocker.sh       — установка БЕЗ Docker (вариант Б)
+  generate_dataset.py, src/,    — фабрика аннотаций (этап 2, сейчас не нужна)
+  IMPROVE.md                    — диагноз и план
   START_HERE.txt                — этот файл
 
 ------------------------------------------------------------
-1. СКАЧАТЬ (4 вещи)
+1. СКАЧАТЬ
 ------------------------------------------------------------
-1) Docker Desktop (Windows):
-   https://www.docker.com/products/docker-desktop/
-
-2) WSL2 — PowerShell от администратора, вставить и Enter:
-   wsl --install -d Ubuntu
-   (после — перезагрузка ПК, создать логин/пароль Linux)
-
-3) Драйвер NVIDIA — https://www.nvidia.com/Download/index.aspx
-   Если видео/игры работают — драйвер уже есть, НЕ скачивать.
-
-4) Этот архив (starter-kit.zip) — уже скачали, браузер положил в
-   C:\Users\Дракула\Downloads\starter-kit.zip
+* WSL2 — PowerShell от администратора, Enter:
+      wsl --install -d Ubuntu
+  перезагрузка ПК → создать логин/пароль Linux.
+* Драйвер NVIDIA — https://www.nvidia.com/Download/index.aspx
+  (если видео/игры работают — уже стоит, не качать).
+* Docker Desktop — https://www.docker.com/products/docker-desktop/
+  НУЖЕН ТОЛЬКО ДЛЯ ВАРИАНТА А. Для Б — не скачивать.
+* starter-kit.zip — уже скачан (C:\Users\Дракула\Downloads).
 
 ------------------------------------------------------------
-2. ОТКРЫТЬ "Ubuntu" (WSL) И КОПИПАСТАТЬ ПО ПОРЯДКУ
+2. ВАРИАНТ А — С DOCKER
 ------------------------------------------------------------
-# -- распаковка архива в домашнюю папку --
+# открыть Ubuntu (WSL), копипаста по порядку:
 cd ~
 python3 -m zipfile -e "/mnt/c/Users/Дракула/Downloads/starter-kit.zip" .
-
-# -- инструмент для скачивания датасетов --
-sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip
+sudo apt-get update -qq && sudo apt-get install -y -qq zip python3-pip
 python3 -m pip install -q -U "huggingface_hub[cli]"
 
-# -- скачать веса базовой VLM (2 ГБ) и LIBERO v3.0 (ещё несколько ГБ, долго) --
 huggingface-cli download HuggingFaceTB/SmolVLM2-500M-Video-Instruct --local-dir ~/vlm_base
 huggingface-cli download HuggingFaceVLA/libero --repo-type dataset --revision v3.0 --local-dir ~/data/HuggingFaceVLA-libero-v3
 
-# -- собрать Docker-образ (долго, 10-30 минут) --
 cd ~/Vision-Action-Data-Factory/aij_robotics-main
-docker build -t aij-robotics:latest .
+docker build -t aij-robotics:latest .          # 10–30 минут
 
-# -- проверка: в выводе должна быть таблица с вашей видеокартой --
-docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu22.04 nvidia-smi
+docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu22.04 nvidia-smi   # проверка GPU
 
-# -- ГЛАВНЫЙ ЗАПУСК: обучение action_expert (часы; VLM пока не трогаем) --
 docker run --gpus all --rm --shm-size=8g \
   -e CUDA_HOME=/usr/local/cuda -e MUJOCO_GL=egl \
   -v "$PWD/configs:/workspace/configs:ro" \
@@ -62,30 +54,64 @@ docker run --gpus all --rm --shm-size=8g \
   ./scripts/run_pipeline.sh configs/participant.yaml --vlm-checkpoint /data/vlm_base
 
 ------------------------------------------------------------
+2Б. ВАРИАНТ Б — БЕЗ DOCKER (WSL + скрипт)
+------------------------------------------------------------
+cd ~
+python3 -m zipfile -e "/mnt/c/Users/Дракула/Downloads/starter-kit.zip" .
+python3 -m pip install -q -U --break-system-packages "huggingface_hub[cli]"
+
+huggingface-cli download HuggingFaceTB/SmolVLM2-500M-Video-Instruct --local-dir ~/vlm_base
+huggingface-cli download HuggingFaceVLA/libero --repo-type dataset --revision v3.0 --local-dir ~/data/HuggingFaceVLA-libero-v3
+
+cd ~/Vision-Action-Data-Factory/aij_robotics-main
+bash setup_wsl_nodocker.sh        # установка стека: apt + pip, 15–40 минут
+
+# конфиг с реальными путями WSL (править ничего не надо):
+cat > configs/participant.local.yaml <<EOF
+run_name: team_v1
+vlm:
+  protocol: full
+  data_path: $HOME/Vision-Action-Data-Factory/aij_robotics-main/examples/smoke/l1_train_5.jsonl
+  eval_data_path: null
+  media_dir: $HOME/Vision-Action-Data-Factory/aij_robotics-main/examples/smoke
+vla:
+  suite: libero
+  dataset_dir: $HOME/data/HuggingFaceVLA-libero-v3
+runtime:
+  gpu_indices: [0]
+  output_root: $HOME/Vision-Action-Data-Factory/aij_robotics-main/runs
+  cache_dir: $HOME/Vision-Action-Data-Factory/aij_robotics-main/.cache/core
+  lerobot_home: $HOME/Vision-Action-Data-Factory/aij_robotics-main/.cache/lerobot
+EOF
+
+# ГЛАВНЫЙ ЗАПУСК (часы — это нормально):
+./scripts/run_pipeline.sh configs/participant.local.yaml --vlm-checkpoint "$HOME/vlm_base"
+
+------------------------------------------------------------
 3. ПОСЛЕ ОБУЧЕНИЯ
 ------------------------------------------------------------
-Готовая папка submission:
-  ~/Vision-Action-Data-Factory/aij_robotics-main/runs/team_v1/submission/
+Готовая папка:  runs/team_v1/submission/   (внутри kit'а)
 
-# проверка весов
-docker run --rm -v "$PWD/runs:/workspace/runs" aij-robotics:latest \
+ВАРИАНТ А (docker):
+  docker run --rm -v "$PWD/runs:/workspace/runs" aij-robotics:latest \
+    ./scripts/validate_submission.sh runs/team_v1/submission
+  docker run --gpus all --rm --shm-size=4g -e MUJOCO_GL=egl \
+    -v "$PWD/runs:/workspace/runs" aij-robotics:latest \
+    bash -c "SUITE=libero_spatial TASK_IDS='[0,1,2,3,4,5,6,7,8,9]' N_EPISODES=1 SEED=1000 ./scripts/run_libero_selfcheck.sh runs/team_v1/submission"
+
+ВАРИАНТ Б (без docker):
   ./scripts/validate_submission.sh runs/team_v1/submission
+  MUJOCO_GL=egl LD_LIBRARY_PATH=/usr/lib/wsl/lib \
+  SUITE=libero_spatial TASK_IDS='[0,1,2,3,4,5,6,7,8,9]' N_EPISODES=1 SEED=1000 \
+    ./scripts/run_libero_selfcheck.sh runs/team_v1/submission
 
-# самопроверка VLA (libero_spatial, 10 задач)
-docker run --gpus all --rm --shm-size=4g -e MUJOCO_GL=egl \
-  -v "$PWD/runs:/workspace/runs" aij-robotics:latest \
-  bash -c "SUITE=libero_spatial TASK_IDS='[0,1,2,3,4,5,6,7,8,9]' N_EPISODES=1 SEED=1000 ./scripts/run_libero_selfcheck.sh runs/team_v1/submission"
-
-# zip для загрузки (только 4 папки/файла, без логов!)
-cd runs/team_v1/submission && zip -r ~/submission.zip . && cd ~
-ls -lh submission.zip    # должен быть ≤ 5 ГБ
-
-Готовый submission.zip залить в форму «загрузка решения».
+# zip для формы (только содержимое submission, ≤5 ГБ):
+cd runs/team_v1/submission && zip -r ~/submission.zip . && cd -
+ls -lh ~/submission.zip
 
 ------------------------------------------------------------
 ЕСЛИ ЧТО-ТО НЕ РАБОТАЕТ
 ------------------------------------------------------------
-Копируйте текст ошибки/лог (последние ~30 строк) — разберёмся.
-Если не хватило VRAM (CUDA out of memory) — скажите, уменьшим batch_size.
-Этап 2 (дообучение VLM на реальных 4 источниках) — по IMPROVE.md §4.1,
-запускайте после того, как этап 1 отработает.
+Пришли текст ошибки (последние ~30 строк лога) — разберём.
+Не хватило памяти GPU (out of memory) — скажи, уменьшим batch_size.
+Этап 2 (VLM на реальных 4 источниках) — IMPROVE.md §4.1, после этапа 1.
