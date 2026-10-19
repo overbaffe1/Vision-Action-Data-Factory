@@ -61,6 +61,9 @@ jobs:
                           z.write(os.path.join(ws, 'starter', 'participant.yaml'), arc)
                       else:
                           z.write(full, arc)
+              # установочный скрипт без Docker — в корень kit'а
+              z.write(os.path.join(ws, 'starter', 'setup_wsl_nodocker.sh'),
+                      'aij_robotics-main/setup_wsl_nodocker.sh')
           size = os.path.getsize(out)
           print(f'starter-kit.zip: {size} bytes')
           assert 100_000 < size < 100_000_000, f'unexpected size {size}'
@@ -70,6 +73,7 @@ jobs:
               assert 'IMPROVE.md' in names
               assert 'aij_robotics-main/scripts/run_pipeline.sh' in names
               assert 'aij_robotics-main/configs/participant.yaml' in names
+              assert 'aij_robotics-main/setup_wsl_nodocker.sh' in names
               print(f'{len(names)} entries')
               # participant.yaml — наш готовый
               assert b'team_v1' in z.read('aij_robotics-main/configs/participant.yaml')
