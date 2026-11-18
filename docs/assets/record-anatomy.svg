@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="510" viewBox="0 0 1200 510" role="img" aria-label="Анатомия одной записи JSONL: кадр, вопрос, ответ и его доказательства">
+  <defs>
+    <style>
+      .t { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1B1B1F; }
+      .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; fill: #1B1B1F; }
+      .muted { fill: #6B7280; }
+      .faint { fill: #9CA3AF; }
+      .card { fill: #FFFFFF; stroke: #E3DED5; stroke-width: 1; }
+      .k { fill: #9CDCFE; }
+      .s { fill: #C6A87C; }
+      .p { fill: #7C838F; }
+      .hl { fill: #FFD166; }
+      .item-title { font-size: 13px; font-weight: 700; }
+      .item-body { font-size: 11.5px; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="510" fill="#FBF9F6"/>
+
+  <text class="t faint" x="24" y="30" font-size="10.5" letter-spacing="1.4">АНАТОМИЯ ЗАПИСИ · annotations.jsonl</text>
+  <text class="t" x="24" y="58" font-size="20" font-weight="600" letter-spacing="-0.01em">Кадр, вопрос, ответ — и доказательства под ответом</text>
+  <text class="t muted" x="1176" y="58" font-size="12" text-anchor="end">ShareGPT: messages + images</text>
+
+  <!-- кадр -->
+  <rect class="card" x="24" y="86" width="300" height="220" rx="10"/>
+  <clipPath id="fclip"><rect x="36" y="98" width="276" height="164" rx="7"/></clipPath>
+  <g clip-path="url(#fclip)">
+    <rect x="36" y="98" width="276" height="164" fill="#EAEEF1"/>
+    <rect x="36" y="214" width="276" height="48" fill="#DED5C7"/>
+    <rect x="36" y="214" width="276" height="1.5" fill="#C9BEAC"/>
+    <path d="M214 190 H284 L275 246 H223 Z" fill="#95A0AB" stroke="#6F7B88" stroke-width="1.1"/>
+    <path d="M220 206 H279 M217 222 H281 M223 238 H276" stroke="#7C8794" stroke-width="0.9"/>
+    <rect x="86" y="174" width="42" height="52" rx="3" fill="#E9A93F" stroke="#B27C25" stroke-width="1.1"/>
+    <rect x="86" y="190" width="42" height="14" fill="#B4462F"/>
+    <ellipse cx="107" cy="174" rx="21" ry="6" fill="#F3C574" stroke="#B27C25" stroke-width="1.1"/>
+    <rect x="100" y="98" width="13" height="36" fill="#4A5260"/>
+    <rect x="91" y="132" width="31" height="13" rx="3" fill="#3A414D"/>
+    <path d="M93 145 h8 l-2 26 h-8 Z" fill="#5A6270" stroke="#3A414D" stroke-width="0.9"/>
+    <path d="M112 145 h8 l2 26 h-8 Z" fill="#5A6270" stroke="#3A414D" stroke-width="0.9"/>
+    <rect x="79" y="166" width="56" height="64" fill="none" stroke="#6C5CE7" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <rect x="88" y="122" width="44" height="40" fill="none" stroke="#2563EB" stroke-width="1.4" stroke-dasharray="4 3"/>
+  </g>
+  <text class="m faint" x="36" y="284" font-size="10.5">images[0]</text>
+  <text class="m" x="36" y="300" font-size="11.5">libero_episode_0/frame_00000.jpg</text>
+
+  <!-- код -->
+  <rect x="352" y="86" width="440" height="384" rx="10" fill="#15171B"/>
+  <g class="m" font-size="12">
+    <text class="p" x="372" y="116">{</text>
+    <text x="372" y="135"><tspan class="p">  </tspan><tspan class="k">"messages"</tspan><tspan class="p">: [</tspan></text>
+    <text class="p" x="372" y="154">    {</text>
+    <text x="372" y="173"><tspan class="p">      </tspan><tspan class="k">"role"</tspan><tspan class="p">: </tspan><tspan class="s">"user"</tspan><tspan class="p">,</tspan></text>
+    <text x="372" y="192"><tspan class="p">      </tspan><tspan class="k">"content"</tspan><tspan class="p">: "</tspan><tspan class="hl">&lt; image&gt;</tspan><tspan class="s">\nWhat should the robot do</tspan></text>
+    <text x="372" y="211"><tspan class="p">                  </tspan><tspan class="s">next to complete 'pick up the soup</tspan></text>
+    <text x="372" y="230"><tspan class="p">                  </tspan><tspan class="s">and place it in the basket'?"</tspan></text>
+    <text class="p" x="372" y="249">    },</text>
+    <text class="p" x="372" y="268">    {</text>
+    <text x="372" y="287"><tspan class="p">      </tspan><tspan class="k">"role"</tspan><tspan class="p">: </tspan><tspan class="s">"assistant"</tspan><tspan class="p">,</tspan></text>
+    <text x="372" y="306"><tspan class="p">      </tspan><tspan class="k">"content"</tspan><tspan class="p">: </tspan><tspan class="s">"Next subtask: Place it in the</tspan></text>
+    <text x="372" y="325"><tspan class="p">                  </tspan><tspan class="s">basket. Progress so far: Step</tspan></text>
+    <text x="372" y="344"><tspan class="p">                  </tspan><tspan class="s">1/2 (19%). Evidence: hand at</tspan></text>
+    <text x="372" y="363"><tspan class="p">                  </tspan><tspan class="s">[85,64,170,128]"</tspan></text>
+    <text class="p" x="372" y="382">    }</text>
+    <text class="p" x="372" y="401">  ],</text>
+    <text x="372" y="420"><tspan class="p">  </tspan><tspan class="k">"images"</tspan><tspan class="p">: [</tspan><tspan class="s">"libero_episode_0/frame_00000.jpg"</tspan><tspan class="p">]</tspan></text>
+    <text class="p" x="372" y="439">}</text>
+  </g>
+
+  <!-- бейджи в коде -->
+  <g>
+    <circle cx="772" cy="188" r="9" fill="#D97706"/><text class="m" x="772" y="191.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">1</text>
+    <circle cx="772" cy="207" r="9" fill="#2563EB"/><text class="m" x="772" y="210.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">2</text>
+    <circle cx="772" cy="302" r="9" fill="#6C5CE7"/><text class="m" x="772" y="305.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">3</text>
+    <circle cx="772" cy="340" r="9" fill="#0891B2"/><text class="m" x="772" y="343.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">4</text>
+    <circle cx="772" cy="359" r="9" fill="#2EA44F"/><text class="m" x="772" y="362.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">5</text>
+  </g>
+
+  <!-- легенда -->
+  <g>
+    <circle cx="836" cy="118" r="9" fill="#D97706"/>
+    <text class="m" x="836" y="121.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">1</text>
+    <text class="t item-title" x="858" y="116">Токен изображения</text>
+    <text class="t muted item-body" x="858" y="133">LLaMA-Factory подставляет кадр</text>
+    <text class="t muted item-body" x="858" y="148">из images по порядку</text>
+
+    <circle cx="836" cy="180" r="9" fill="#2563EB"/>
+    <text class="m" x="836" y="183.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">2</text>
+    <text class="t item-title" x="858" y="178">Вопрос</text>
+    <text class="t muted item-body" x="858" y="195">33 разные формулировки</text>
+    <text class="t muted item-body" x="858" y="210">из 16 типов задач</text>
+
+    <circle cx="836" cy="242" r="9" fill="#6C5CE7"/>
+    <text class="m" x="836" y="245.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">3</text>
+    <text class="t item-title" x="858" y="240">Подзадача</text>
+    <text class="t muted item-body" x="858" y="257">из декомпозиции инструкции:</text>
+    <text class="t muted item-body" x="858" y="272">rule-based, без LLM</text>
+
+    <circle cx="836" cy="304" r="9" fill="#0891B2"/>
+    <text class="m" x="836" y="307.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">4</text>
+    <text class="t item-title" x="858" y="302">Прогресс</text>
+    <text class="t muted item-body" x="858" y="319">Step 1/2 (19%) — счёт по цепочке</text>
+    <text class="t muted item-body" x="858" y="334">подзадач, а не оценка модели</text>
+
+    <circle cx="836" cy="366" r="9" fill="#2EA44F"/>
+    <text class="m" x="836" y="369.5" font-size="10.5" fill="#FFFFFF" text-anchor="middle">5</text>
+    <text class="t item-title" x="858" y="364">Доказательство</text>
+    <text class="t muted item-body" x="858" y="381">координаты боксов из детектора:</text>
+    <text class="t muted item-body" x="858" y="396">ответ можно проверить глазами</text>
+  </g>
+
+  <text class="t faint" x="24" y="486" font-size="11.5">В панели длинные строки перенесены для читаемости — в файле каждая запись занимает одну строку JSONL. Справа: 92 записи демо, средний ответ — 230 символов.</text>
+</svg>

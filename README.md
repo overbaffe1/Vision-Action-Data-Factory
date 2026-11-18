@@ -16,9 +16,9 @@
   <img src="https://img.shields.io/badge/license-MIT-2EA44F" alt="MIT License">
 </p>
 
-<p align="center"><a href="data/final_input/libero_episode_0/frame_00000.jpg"><img src="data/final_input/libero_episode_0/frame_00000.jpg" width="32%" alt="LIBERO, кадр 0 — захват"></a><a href="data/final_input/libero_episode_0/frame_00007.jpg"><img src="data/final_input/libero_episode_0/frame_00007.jpg" width="32%" alt="LIBERO, кадр 7 — перенос"></a><a href="data/final_input/libero_episode_0/frame_00015.jpg"><img src="data/final_input/libero_episode_0/frame_00015.jpg" width="32%" alt="LIBERO, кадр 15 — укладка"></a></p>
+<p align="center"><a href="docs/assets/episode-triptych.svg"><img src="docs/assets/episode-triptych.svg" width="100%" alt="Три стадии эпизода: захват, перенос, укладка — с боксами детектора и прогрессом задачи"></a></p>
 
-_Три кадра одного эпизода симуляции LIBERO: захват, перенос, укладка. Фабрика превращает их в 12 записей — по четыре вопроса на каждый кадр._
+_Три стадии одного эпизода: захват → перенос → укладка. Реальные кадры демо-эпизодов — плоские заглушки 256×256, поэтому сцена нарисована векторно; боксы, подписи `soup 0.91` и проценты — настоящий вывод пайплайна._
 
 </div>
 
@@ -34,6 +34,10 @@ _Три кадра одного эпизода симуляции LIBERO: зах
 какая фаза задачи идёт, что делать дальше, чем закончился прошлый шаг. Такая разметка
 обычно делается руками, а руками она не масштабируется: 1693 эпизода LIBERO — это уже
 десятки тысяч кадров.
+
+Демо в этом репозитории намеренно маленькое и синтетическое: три эпизода, кадры-заглушки
+256×256. Оно проверяет механику — сэмплинг, геометрию, сборку JSONL, детерминизм, — но не
+качество детекции. Настоящие источники подключаются тем же кодом.
 
 Фабрика собирает эти пары автоматически из того, что уже есть в записи — кадров,
 телеметрии действий, состояния захвата и текста инструкции. Ничего не генерируется
@@ -54,17 +58,7 @@ _Три кадра одного эпизода симуляции LIBERO: зах
 
 ## Как это работает
 
-```mermaid
-flowchart LR
-    A["LeRobot v3<br/>meta/info.json + parquet<br/>или папка кадров, или mp4"] --> B["Семплер<br/>uniform / keyframe / adaptive"]
-    B --> C["Детектор YOLOv8<br/>fallback: dummy"]
-    C --> D["Геометрия<br/>spatial relations"]
-    B --> E["Разбор инструкции<br/>подзадачи, прогресс"]
-    D --> F["Генератор<br/>16 типов задач × 3 кандидата"]
-    E --> F
-    F --> G["Судья + дедуп + polish"]
-    G --> H["ShareGPT JSONL<br/>+ images/"]
-```
+<p align="center"><a href="docs/assets/pipeline.svg"><img src="docs/assets/pipeline.svg" width="100%" alt="Пайплайн: вход, сэмплер кадров, восприятие, генерация, отбор, выход в ShareGPT JSONL"></a></p>
 
 | Этап | Код | Что решает |
 |------|-----|------------|
@@ -95,8 +89,8 @@ flowchart LR
 
 | | |
 |---|---|
-| Эпизодов на входе | **3** (2 × LIBERO + 1 smoke) |
-| Кадров после сэмплинга | **23** из 39 |
+| Эпизодов на входе | **3** синтетических заглушки (структура LIBERO) |
+| Кадров после сэмплинга | **23** из 39 плоских кадров 256×256 |
 | Записей на выходе | **92** (4 на кадр) |
 | Уникальных вопросов | **33** из 92 записей |
 | Повторов «вопрос + кадр» | **0** из 92 — дедуп по хэшу |
@@ -111,26 +105,15 @@ flowchart LR
 
 ## Анатомия одной записи
 
+<p align="center"><a href="docs/assets/record-anatomy.svg"><img src="docs/assets/record-anatomy.svg" width="100%" alt="Анатомия записи JSONL: кадр, токен изображения, вопрос, подзадача, прогресс и координаты боксов"></a></p>
+
+Запись целиком — ровно одна строка JSONL, готовая для LLaMA-Factory:
+
 ```json
-{
-  "messages": [
-    {
-      "role": "user",
-      "content": "< image>\nCarefully observe the image. What should the robot do next to complete 'pick up the alphabet soup and place it in the basket'?"
-    },
-    {
-      "role": "assistant",
-      "content": "Next subtask: Place it in the basket. After completing 'Pick up the alphabet soup', the robot should move to this step. Progress so far: Step 1/2 (19%). Evidence: hand at [85,64,170,128]; container at [99,143,150,185]"
-    }
-  ],
-  "images": ["libero_episode_0/frame_00000.jpg"]
-}
+{"messages": [{"role": "user", "content": "< image>\nWhat should the robot do next to complete 'pick up the alphabet soup and place it in the basket'?"}, {"role": "assistant", "content": "Next subtask: Place it in the basket. After completing 'Pick up the alphabet soup', the robot should move to this step. Progress so far: Step 1/2 (19%). Evidence: hand at [85,64,170,128]; container at [99,143,150,185]"}], "images": ["libero_episode_0/frame_00000.jpg"]}
 ```
 
-- `< image>` — токен-заглушка ShareGPT; LLaMA-Factory подставляет картинку по порядку из `images`.
-- `Evidence: … at [x1,y1,x2,y2]` — координаты прямо из детектора. По ним ответ можно проверить, а модель учится привязывать текст к пикселям.
-- `Step 1/2 (19%)` — прогресс из декомпозиции инструкции, а не выдуманное число.
-- Пути к картинкам относительные — датасет переносится вместе с папкой медиа.
+Пути к картинкам относительные, поэтому датасет переносится вместе с папкой медиа.
 
 ## Контроль качества
 
@@ -191,9 +174,12 @@ INFO | factory     | Готово: 92 примеров в annotations.jsonl за
 |---|---|
 | ✅ Пайплайн работает на CPU и детерминирован | проверено: 92 записи, одинаковый md5 на повторных прогонах |
 | ✅ Формат совместим с LLaMA-Factory / SmolVLA | ShareGPT JSONL с `messages` + `images` |
+| ⚠️ Кадры демо — заглушки | плоские 256×256 картинки: проверяют механику, но не дают настоящей сцены. Реальный LeRobot-датасет подключается тем же `--input` |
 | ⚠️ Детектор в демо — заглушка | без `ultralytics` боксы синтетические, качество `spatial_*` на демо условное |
 | ⚠️ Демо-масштаб | 92 записи — витрина механики, для SFT нужны тысячи примеров с реальных источников |
 | ❌ Обученной модели в репозитории нет | в `action_expert/` лежит smoke-чекпоинт: 10 шагов на 5 эпизодах, это проверка пайплайна, а не результат |
+
+<p align="center"><a href="docs/assets/smoke-vs-full.svg"><img src="docs/assets/smoke-vs-full.svg" width="100%" alt="Сравнение smoke-прогона и полного рецепта: 10 против 30 000 шагов, 5 против 1693 эпизодов"></a></p>
 
 Последний пункт разобран в [IMPROVE.md](IMPROVE.md): там сверены `train_config.json` из
 сабмита с шаблоном организаторов, показано, почему счёт ~9.9 — это уровень почти
@@ -218,7 +204,8 @@ self-check по `libero_spatial`, отбор чекпоинта).
 generate_dataset.py      точка входа: оркестрация, веса задач, запись JSONL
 src/                     семплер, лоадер, детектор, геометрия, подзадачи, судья
 config.yaml              стратегия сэмплинга, 16 задач, веса, пороги качества
-data/final_input/        3 демо-эпизода: 39 кадров (32 LIBERO + 7 smoke)
+data/final_input/        3 демо-эпизода: 39 кадров-заглушек (структура LIBERO)
+docs/assets/             векторные схемы для README (SVG, без внешних файлов)
 annotations.jsonl        результат демо: 92 записи (+ annotations.stats.json)
 IMPROVE.md               разбор счёта и план полного обучения
 aij_robotics-main/       стартовый kit организаторов: SmolVLM2 → SmolVLA, Docker, self-check

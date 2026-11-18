@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="396" viewBox="0 0 1200 396" role="img" aria-label="Схема пайплайна: вход, сэмплер кадров, восприятие, генерация, отбор, выход в ShareGPT JSONL">
+  <defs>
+    <style>
+      .t { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1B1B1F; }
+      .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; fill: #1B1B1F; }
+      .muted { fill: #6B7280; }
+      .faint { fill: #9CA3AF; }
+      .h { font-size: 13.5px; font-weight: 700; letter-spacing: 0.02em; }
+      .body { font-size: 11.5px; }
+      .file { font-size: 10px; }
+      .card { fill: #FFFFFF; stroke: #E3DED5; stroke-width: 1; }
+      .link { stroke: #C7C2B8; stroke-width: 1.3; fill: none; }
+      .arrowhead { fill: #C7C2B8; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="396" fill="#FBF9F6"/>
+
+  <text class="t faint" x="24" y="30" font-size="9.5" letter-spacing="1.4">ПАЙПЛАЙН · generate_dataset.py</text>
+  <text class="t" x="24" y="56" font-size="19" font-weight="600" letter-spacing="-0.01em">Один проход: от эпизода до готового JSONL</text>
+  <text class="t muted" x="1176" y="56" font-size="11" text-anchor="end">офлайн · без GPU · детерминированно при seed 42</text>
+
+  <!-- connectors -->
+  <g class="link">
+    <path d="M197 145 H 219"/><path d="M392 145 H 414"/><path d="M587 145 H 609"/>
+    <path d="M782 145 H 804"/><path d="M977 145 H 999"/>
+  </g>
+  <g class="arrowhead">
+    <path d="M216 141 l5 4 -5 4 Z"/><path d="M411 141 l5 4 -5 4 Z"/><path d="M606 141 l5 4 -5 4 Z"/>
+    <path d="M801 141 l5 4 -5 4 Z"/><path d="M996 141 l5 4 -5 4 Z"/>
+  </g>
+
+  <!-- 01 ВХОД -->
+  <g>
+    <rect class="card" x="24" y="70" width="173" height="150" rx="10"/>
+    <rect x="38" y="86" width="3.5" height="40" rx="1.75" fill="#2563EB"/>
+    <text class="m faint" x="48" y="96" font-size="10">01</text>
+    <text class="t h" x="48" y="118">ВХОД</text>
+    <text class="t muted body" x="38" y="140">LeRobot v3,</text>
+    <text class="t muted body" x="38" y="155">папка кадров,</text>
+    <text class="t muted body" x="38" y="170">mp4 через cv2</text>
+    <text class="m faint file" x="38" y="202">dataset_loader.py</text>
+  </g>
+
+  <!-- 02 КАДРЫ -->
+  <g>
+    <rect class="card" x="219" y="70" width="173" height="150" rx="10"/>
+    <rect x="233" y="86" width="3.5" height="40" rx="1.75" fill="#0891B2"/>
+    <text class="m faint" x="243" y="96" font-size="10">02</text>
+    <text class="t h" x="243" y="118">КАДРЫ</text>
+    <text class="t muted body" x="233" y="140">uniform, keyframe,</text>
+    <text class="t muted body" x="233" y="155">adaptive: дельта</text>
+    <text class="t muted body" x="233" y="170">action и захвата</text>
+    <text class="m faint file" x="233" y="202">frame_sampler.py</text>
+  </g>
+
+  <!-- 03 ВОСПРИЯТИЕ -->
+  <g>
+    <rect class="card" x="414" y="70" width="173" height="150" rx="10"/>
+    <rect x="428" y="86" width="3.5" height="40" rx="1.75" fill="#6C5CE7"/>
+    <text class="m faint" x="438" y="96" font-size="10">03</text>
+    <text class="t h" x="438" y="118">ВОСПРИЯТИЕ</text>
+    <text class="t muted body" x="428" y="140">YOLOv8 → боксы,</text>
+    <text class="t muted body" x="428" y="155">геометрия сцены,</text>
+    <text class="t muted body" x="428" y="170">сетка положения</text>
+    <text class="m faint file" x="428" y="202">detectors/, spatial.py</text>
+  </g>
+
+  <!-- 04 ГЕНЕРАЦИЯ -->
+  <g>
+    <rect class="card" x="609" y="70" width="173" height="150" rx="10"/>
+    <rect x="623" y="86" width="3.5" height="40" rx="1.75" fill="#D97706"/>
+    <text class="m faint" x="633" y="96" font-size="10">04</text>
+    <text class="t h" x="633" y="118">ГЕНЕРАЦИЯ</text>
+    <text class="t muted body" x="623" y="140">16 типов задач ×</text>
+    <text class="t muted body" x="623" y="155">3 кандидата ответа,</text>
+    <text class="t muted body" x="623" y="170">прогресс, подзадачи</text>
+    <text class="m faint file" x="623" y="202">subtask.py, captioner.py</text>
+  </g>
+
+  <!-- 05 ОТБОР -->
+  <g>
+    <rect class="card" x="804" y="70" width="173" height="150" rx="10"/>
+    <rect x="818" y="86" width="3.5" height="40" rx="1.75" fill="#DB2777"/>
+    <text class="m faint" x="828" y="96" font-size="10">05</text>
+    <text class="t h" x="828" y="118">ОТБОР</text>
+    <text class="t muted body" x="818" y="140">судья ≥ 0.4,</text>
+    <text class="t muted body" x="818" y="155">дедуп по хэшу,</text>
+    <text class="t muted body" x="818" y="170">polish худших</text>
+    <text class="m faint file" x="818" y="202">judge.py</text>
+  </g>
+
+  <!-- 06 ВЫХОД -->
+  <g>
+    <rect class="card" x="999" y="70" width="173" height="150" rx="10"/>
+    <rect x="1013" y="86" width="3.5" height="40" rx="1.75" fill="#2EA44F"/>
+    <text class="m faint" x="1023" y="96" font-size="10">06</text>
+    <text class="t h" x="1023" y="118">ВЫХОД</text>
+    <text class="t muted body" x="1013" y="140">ShareGPT JSONL:</text>
+    <text class="m muted body" x="1013" y="158">messages</text>
+    <text class="m muted body" x="1013" y="173">images</text>
+    <text class="m faint file" x="1013" y="202">annotations.jsonl</text>
+  </g>
+
+  <!-- отсев -->
+  <path d="M890 220 V 250" stroke="#DC2626" stroke-width="1.3" stroke-dasharray="4 3" fill="none"/>
+  <path d="M886 248 l4 6 4 -6 Z" fill="#DC2626"/>
+  <rect x="804" y="258" width="173" height="66" rx="8" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+  <text class="t" x="818" y="278" font-size="10.5" font-weight="600" fill="#B91C1C">в брак</text>
+  <text class="t" x="818" y="294" font-size="10" fill="#7F1D1D">score &lt; 0.4, дубли</text>
+  <text class="t" x="818" y="308" font-size="10" fill="#7F1D1D">и «as an AI»-фразы</text>
+
+  <!-- метрики прогона -->
+  <g>
+    <rect x="24" y="258" width="356" height="66" rx="8" fill="#FFFFFF" stroke="#E3DED5"/>
+    <text class="t faint" x="38" y="278" font-size="10.5" letter-spacing="1.2">ВХОД ДЕМО</text>
+    <text class="m" x="38" y="300" font-size="14">3 эпизода · 39 кадров</text>
+    <text class="t muted" x="38" y="315" font-size="10.5">3 заглушки в структуре LIBERO, всё локально</text>
+
+    <rect x="404" y="258" width="356" height="66" rx="8" fill="#FFFFFF" stroke="#E3DED5"/>
+    <text class="t faint" x="418" y="278" font-size="10.5" letter-spacing="1.2">ПОСЛЕ СЭМПЛЕРА</text>
+    <text class="m" x="418" y="300" font-size="14">23 кадра · 4 записи на кадр</text>
+    <text class="t muted" x="418" y="315" font-size="10">adaptive: 8 кадров на эпизод (потолок max_frames)</text>
+
+    <rect x="999" y="258" width="173" height="66" rx="8" fill="#F0FAF3" stroke="#A7DDB5"/>
+    <text class="t faint" x="1013" y="278" font-size="10.5" letter-spacing="1.2">РЕЗУЛЬТАТ</text>
+    <text class="m" x="1013" y="300" font-size="13" fill="#166534">92 записи</text>
+    <text class="t" x="1013" y="315" font-size="10" fill="#166534">0.1 с · md5 стабилен</text>
+  </g>
+
+  <text class="t faint" x="24" y="366" font-size="11">Цифры — демо-прогон из этого репозитория. На реальных источниках (четыре LeRobot-датасета) масштаб другой, шаги те же.</text>
+</svg>
