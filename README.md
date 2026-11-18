@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/выход-ShareGPT%20JSONL-6C5CE7" alt="ShareGPT JSONL">
   <img src="https://img.shields.io/badge/модели-SmolVLM2%20→%20SmolVLA-orange" alt="SmolVLM2 → SmolVLA">
   <img src="https://img.shields.io/badge/хакатон-AIJ%20Robotics-111827" alt="Хакатон AIJ Robotics">
+  <img src="https://img.shields.io/badge/license-MIT-2EA44F" alt="MIT License">
 </p>
 
 <p align="center"><a href="data/final_input/libero_episode_0/frame_00000.jpg"><img src="data/final_input/libero_episode_0/frame_00000.jpg" width="32%" alt="LIBERO, кадр 0 — захват"></a><a href="data/final_input/libero_episode_0/frame_00007.jpg"><img src="data/final_input/libero_episode_0/frame_00007.jpg" width="32%" alt="LIBERO, кадр 7 — перенос"></a><a href="data/final_input/libero_episode_0/frame_00015.jpg"><img src="data/final_input/libero_episode_0/frame_00015.jpg" width="32%" alt="LIBERO, кадр 15 — укладка"></a></p>
@@ -239,3 +240,14 @@ baseline.zip, participant.zip          архивы baseline и участия
 **Что дальше.** Демо закрывает механику; следующий шаг — прогнать фабрику по четырём
 разрешённым источникам (BridgeData2, Fractal, Language Table, Egocentric-100K), получить
 тысячи примеров и обучить VLM на них. План и команды — в [IMPROVE.md](IMPROVE.md).
+
+## Лицензия
+
+Код фабрики — [MIT](LICENSE): `generate_dataset.py`, `src/`, `config.yaml`, `starter/`,
+`.github/`. Берите и используйте, ссылка на репозиторий приветствуется.
+
+Материалы хакатона лицензией MIT не покрываются и живут по своим условиям:
+
+- `aij_robotics-main/` — стартовый kit организаторов, отдельного LICENSE в нём нет: права остаются у авторов оригинала;
+- `espada-feat-bpc-tz-production-scale/` — MIT © 2026 Sberbank, текст в [LICENSE](espada-feat-bpc-tz-production-scale/LICENSE) внутри папки;
+- `baseline.zip`, `participant.zip`, `action_expert/`, `smolvlm2/` — архивы организаторов и smoke-веса моделей: только для воспроизведения сабмита, не для переиспользования.
