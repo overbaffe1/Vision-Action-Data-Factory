@@ -30,7 +30,7 @@ self-check даёт единицы-десятки процентов уже на
   абсолютный путь сборки на чужой машине (на машине судьи такой путь существует,
   поэтому eval не падал).
 - `policy_preprocessor_step_5_normalizer_processor.safetensors` — нормализатор
-  state/action, посчитанный по **mini-датасету** (5 эпизодов) — статистики враные
+  state/action, посчитанный по **mini-датасету** (5 эпизодов) — статистики неверные
   даже для inference.
 
 **Вывод: обе компоненты (VLM и action expert) нужно обучить заново по полному
@@ -182,10 +182,10 @@ docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu22.04 nvidia-smi
 Если здесь видны CUDA/карта — ок. (`nvidia-smi` в самом WSL без драйвера на
 хосте может не работать — главное GPU внутри контейнера.)
 
-### 6.2 Клон репозиторий (всё уже внутри)
+### 6.2 Клон репозитория (всё уже внутри)
 
 ```bash
-cd ~ && git clone -b arena/8c48778b-vision-action-data-factory \
+cd ~ && git clone -b main \
   https://github.com/overbaffe1/Vision-Action-Data-Factory.git
 cd Vision-Action-Data-Factory
 # aij_robotics-main/ — стартовый kit (обучение, валидация, self-check)

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - arena/8c48778b-vision-action-data-factory
+      - main
     paths:
       - '.github/workflows/pack-starter-kit.yml'
       - 'starter/**'
@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: arena/8c48778b-vision-action-data-factory
+          ref: main
           fetch-depth: 1
 
       - name: Build starter-kit.zip

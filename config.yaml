@@ -18,7 +18,7 @@ input:
 sampling:
   # Стратегия выборки кадров из эпизода
   strategy: adaptive  # uniform | keyframe | adaptive
-  frames_per_episode: 5
+  frames_per_episode: 8
   # uniform: каждый N-й кадр
   uniform_stride: 6
   # keyframe: по дельте action/state
@@ -69,7 +69,7 @@ tasks:
     bbox_grounding: 1.4
     pointing: 1.0
   # Сколько примеров на кадр (среднее). Избыток режется judge+ratchet.
-  examples_per_frame: 3
+  examples_per_frame: 4
 
 detectors:
   yolo:
