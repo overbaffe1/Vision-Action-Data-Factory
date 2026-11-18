@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="436" viewBox="0 0 1200 436" role="img" aria-label="Три стадии эпизода: захват, перенос, укладка — схема сцены с боксами детектора и прогрессом задачи">
+  <defs>
+    <style>
+      .t { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #1B1B1F; }
+      .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; fill: #1B1B1F; }
+      .muted { fill: #6B7280; }
+      .faint { fill: #9CA3AF; }
+      .label { font-size: 13px; font-weight: 600; }
+      .small { font-size: 12.5px; }
+      .tiny { font-size: 13px; }
+      .cap { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+      .card { fill: #FFFFFF; stroke: #E3DED5; stroke-width: 1; }
+      .bbox { fill: none; stroke-width: 1.5; stroke-dasharray: 5 3; }
+      .objs { stroke-linejoin: round; }
+      .wall { fill: #EAEEF1; }
+      .table { fill: #DED5C7; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="436" fill="#FBF9F6"/>
+
+  <text class="t faint tiny" x="24" y="24" letter-spacing="1.4">ЭПИЗОД libero_episode_0</text>
+  <text class="m" x="24" y="44" font-size="15">pick up the alphabet soup and place it in the basket</text>
+  <text class="t muted small" x="1176" y="44" text-anchor="end">16 кадров в эпизоде · сэмплер взял 8</text>
+
+  <!-- ============ PANEL 1: захват ============ -->
+  <g>
+    <rect class="card" x="24" y="60" width="368" height="332" rx="12"/>
+    <text class="m faint tiny" x="40" y="84">frame_00000.jpg</text>
+    <text class="m faint tiny" x="376" y="84" text-anchor="end">t 0.00s</text>
+
+    <clipPath id="clip1"><rect x="36" y="94" width="344" height="196" rx="8"/></clipPath>
+    <g clip-path="url(#clip1)">
+      <rect class="wall" x="36" y="94" width="344" height="196"/>
+      <rect class="table" x="36" y="228" width="344" height="62"/>
+      <rect x="36" y="228" width="344" height="1.5" fill="#C9BEAC"/>
+      <!-- basket -->
+      <g class="objs">
+        <path d="M254 196 H342 L330 268 H266 Z" fill="#95A0AB" stroke="#6F7B88" stroke-width="1.2"/>
+        <path d="M262 216 H334 M258 236 H338 M266 256 H330" stroke="#7C8794" stroke-width="1"/>
+        <path d="M282 196 V268 M312 196 V268" stroke="#7C8794" stroke-width="1"/>
+      </g>
+      <!-- can -->
+      <g class="objs">
+        <rect x="96" y="186" width="46" height="58" rx="3" fill="#E9A93F" stroke="#B27C25" stroke-width="1.2"/>
+        <rect x="96" y="204" width="46" height="16" fill="#B4462F"/>
+        <ellipse cx="119" cy="186" rx="23" ry="6.5" fill="#F3C574" stroke="#B27C25" stroke-width="1.2"/>
+        <text class="m" x="119" y="215.5" font-size="8" text-anchor="middle" fill="#FBEADF">SOUP</text>
+      </g>
+      <!-- gripper, hovering above the can -->
+      <g class="objs">
+        <rect x="112" y="94" width="14" height="38" fill="#4A5260"/>
+        <rect x="102" y="132" width="34" height="14" rx="3" fill="#3A414D"/>
+        <path d="M104 146 h9 l-2 30 h-9 Z" fill="#5A6270" stroke="#3A414D" stroke-width="1"/>
+        <path d="M126 146 h9 l2 30 h-9 Z" fill="#5A6270" stroke="#3A414D" stroke-width="1"/>
+      </g>
+      <!-- detection: container -->
+      <rect class="bbox" x="88" y="178" width="62" height="70" stroke="#6C5CE7"/>
+      <rect x="158" y="250" width="70" height="17" rx="3" fill="#6C5CE7"/>
+      <text class="m" x="165" y="262.5" font-size="11" fill="#FFFFFF">soup 0.91</text>
+      <!-- detection: gripper -->
+      <rect class="bbox" x="100" y="128" width="50" height="42" stroke="#2563EB"/>
+      <rect x="150" y="120" width="70" height="17" rx="3" fill="#2563EB"/>
+      <text class="m" x="157" y="132" font-size="11" fill="#FFFFFF">hand 0.88</text>
+    </g>
+
+    <text class="t cap" x="40" y="320">Захват</text>
+    <text class="m muted tiny" x="40" y="338">Step 1/2 · 19%</text>
+    <rect x="40" y="348" width="256" height="5" rx="2.5" fill="#EAE5DC"/>
+    <rect x="40" y="348" width="48" height="5" rx="2.5" fill="#6C5CE7"/>
+    <text class="t muted small" x="376" y="320" text-anchor="end">«что робот делает сейчас»</text>
+  </g>
+
+  <!-- ============ PANEL 2: перенос ============ -->
+  <g>
+    <rect class="card" x="416" y="60" width="368" height="332" rx="12"/>
+    <text class="m faint tiny" x="432" y="84">frame_00007.jpg</text>
+    <text class="m faint tiny" x="768" y="84" text-anchor="end">t 0.53s</text>
+
+    <clipPath id="clip2"><rect x="428" y="94" width="344" height="196" rx="8"/></clipPath>
+    <g clip-path="url(#clip2)">
+      <rect class="wall" x="428" y="94" width="344" height="196"/>
+      <rect class="table" x="428" y="228" width="344" height="62"/>
+      <rect x="428" y="228" width="344" height="1.5" fill="#C9BEAC"/>
+      <!-- ghost: откуда взяли -->
+      <ellipse cx="475" cy="190" rx="23" ry="6.5" fill="#FFFFFF" fill-opacity="0.4" stroke="#9CA3AF" stroke-width="1.2" stroke-dasharray="4 4"/>
+      <rect x="452" y="190" width="46" height="56" rx="3" fill="#FFFFFF" fill-opacity="0.4" stroke="#9CA3AF" stroke-width="1.2" stroke-dasharray="4 4"/>
+      <text class="m faint" x="475" y="262" font-size="11" text-anchor="middle">t 0.10s</text>
+      <path d="M500 214 C 508 200 508 194 512 186" fill="none" stroke="#9CA3AF" stroke-width="1.3" stroke-dasharray="3 4"/>
+      <path d="M508 190 l4 -8 5 7 Z" fill="#9CA3AF"/>
+      <!-- basket -->
+      <g class="objs">
+        <path d="M646 196 H734 L722 268 H658 Z" fill="#95A0AB" stroke="#6F7B88" stroke-width="1.2"/>
+        <path d="M654 216 H726 M650 236 H730 M658 256 H722" stroke="#7C8794" stroke-width="1"/>
+        <path d="M674 196 V268 M704 196 V268" stroke="#7C8794" stroke-width="1"/>
+      </g>
+      <!-- gripper holding the can -->
+      <g class="objs">
+        <rect x="528" y="94" width="14" height="26" fill="#4A5260"/>
+        <rect x="518" y="118" width="34" height="14" rx="3" fill="#3A414D"/>
+        <path d="M520 132 h9 l-2 22 h-9 Z" fill="#5A6270" stroke="#3A414D" stroke-width="1"/>
+        <path d="M542 132 h9 l2 22 h-9 Z" fill="#5A6270" stroke="#3A414D" stroke-width="1"/>
+        <rect x="512" y="160" width="46" height="58" rx="3" fill="#E9A93F" stroke="#B27C25" stroke-width="1.2"/>
+        <rect x="512" y="178" width="46" height="16" fill="#B4462F"/>
+        <ellipse cx="535" cy="160" rx="23" ry="6.5" fill="#F3C574" stroke="#B27C25" stroke-width="1.2"/>
+        <text class="m" x="535" y="189.5" font-size="8" text-anchor="middle" fill="#FBEADF">SOUP</text>
+      </g>
+      <!-- detection: container -->
+      <rect class="bbox" x="504" y="150" width="62" height="76" stroke="#6C5CE7"/>
+      <rect x="430" y="148" width="70" height="17" rx="3" fill="#6C5CE7"/>
+      <text class="m" x="437" y="160" font-size="11" fill="#FFFFFF">soup 0.87</text>
+      <path d="M484 157 H 502" stroke="#6C5CE7" stroke-width="1"/>
+      <!-- detection: gripper -->
+      <rect class="bbox" x="514" y="114" width="48" height="40" stroke="#2563EB"/>
+      <rect x="566" y="106" width="70" height="17" rx="3" fill="#2563EB"/>
+      <text class="m" x="573" y="118" font-size="11" fill="#FFFFFF">hand 0.90</text>
+      <path d="M568 115 H 564" stroke="#2563EB" stroke-width="1"/>
+    </g>
+
+    <text class="t cap" x="432" y="320">Перенос</text>
+    <text class="m muted tiny" x="432" y="338">Step 1/2 · 62%</text>
+    <rect x="432" y="348" width="256" height="5" rx="2.5" fill="#EAE5DC"/>
+    <rect x="432" y="348" width="159" height="5" rx="2.5" fill="#6C5CE7"/>
+    <text class="t muted small" x="768" y="320" text-anchor="end">«что делать дальше»</text>
+  </g>
+
+  <!-- ============ PANEL 3: укладка ============ -->
+  <g>
+    <rect class="card" x="808" y="60" width="368" height="332" rx="12"/>
+    <text class="m faint tiny" x="824" y="84">frame_00015.jpg</text>
+    <text class="m faint tiny" x="1160" y="84" text-anchor="end">t 1.17s</text>
+
+    <clipPath id="clip3"><rect x="820" y="94" width="344" height="196" rx="8"/></clipPath>
+    <g clip-path="url(#clip3)">
+      <rect class="wall" x="820" y="94" width="344" height="196"/>
+      <rect class="table" x="820" y="228" width="344" height="62"/>
+      <rect x="820" y="228" width="344" height="1.5" fill="#C9BEAC"/>
+      <!-- basket back, can inside, basket front -->
+      <path d="M1046 190 H1144 L1130 266 H1060 Z" fill="#95A0AB" stroke="#6F7B88" stroke-width="1.2"/>
+      <g class="objs">
+        <rect x="1068" y="198" width="46" height="56" rx="3" fill="#E9A93F" stroke="#B27C25" stroke-width="1.2"/>
+        <rect x="1068" y="214" width="46" height="15" fill="#B4462F"/>
+        <ellipse cx="1091" cy="198" rx="23" ry="6.5" fill="#F3C574" stroke="#B27C25" stroke-width="1.2"/>
+        <text class="m" x="1091" y="226" font-size="8" text-anchor="middle" fill="#FBEADF">SOUP</text>
+      </g>
+      <g class="objs">
+        <path d="M1056 224 H1136 M1060 242 H1132 M1063 254 H1128" stroke="#7C8794" stroke-width="1"/>
+        <path d="M1078 196 V266 M1104 196 V266" stroke="#7C8794" stroke-width="1"/>
+      </g>
+      <!-- gripper open above the basket -->
+      <g class="objs">
+        <rect x="1084" y="94" width="14" height="30" fill="#4A5260"/>
+        <rect x="1074" y="122" width="34" height="14" rx="3" fill="#3A414D"/>
+        <path d="M1076 136 h9 l-6 20 h-9 Z" fill="#5A6270" stroke="#3A414D" stroke-width="1"/>
+        <path d="M1098 136 h9 l6 20 h-9 Z" fill="#5A6270" stroke="#3A414D" stroke-width="1"/>
+      </g>
+      <!-- detection -->
+      <rect class="bbox" x="1062" y="188" width="58" height="70" stroke="#2EA44F"/>
+      <rect x="996" y="158" width="70" height="17" rx="3" fill="#2EA44F"/>
+      <text class="m" x="1003" y="170" font-size="11" fill="#FFFFFF">soup 0.90</text>
+      <path d="M1066 167 H 1060 V 186" stroke="#2EA44F" stroke-width="1"/>
+    </g>
+
+    <text class="t cap" x="824" y="320">Укладка</text>
+    <text class="m muted tiny" x="824" y="338">Complete · 100%</text>
+    <rect x="824" y="348" width="256" height="5" rx="2.5" fill="#EAE5DC"/>
+    <rect x="824" y="348" width="256" height="5" rx="2.5" fill="#2EA44F"/>
+    <text class="t muted small" x="1160" y="320" text-anchor="end">«задача выполнена»</text>
+  </g>
+
+  <text class="t faint small" x="24" y="416">Схема сцены, а не скриншот: кадры демо — плоские заглушки 256×256. Боксы, подписи и проценты — из настоящего вывода пайплайна.</text>
+</svg>
