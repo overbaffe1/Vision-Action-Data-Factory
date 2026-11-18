@@ -9,11 +9,6 @@ name: Finalize submission.zip
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/finalize-submission.yml'
 
 jobs:
   finalize:
@@ -178,25 +173,21 @@ jobs:
             echo "MD5: \`$(cat /tmp/final_md5.txt)\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Debug trace to repo on failure
+      - name: Debug trace on failure
         if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           {
             echo "=== run ${{ github.run_id }} ==="
             cat /tmp/trace.log 2>/dev/null || true
             ls -la /tmp/*.zip 2>/dev/null || true
-          } > submission_parts_debug.log 2>&1 || true
-          sha=$(gh api "repos/${{ github.repository }}/contents/submission_parts_debug.log?ref=main" --jq .sha 2>/dev/null || echo "")
-          python3 - "$sha" > /tmp/put.json <<'PYEOF'
-          import json, base64, sys
-          sha = sys.argv[1] if len(sys.argv) > 1 else ''
-          d = {"message": "finalize debug run ${{ github.run_id }}",
-               "content": base64.b64encode(open('submission_parts_debug.log','rb').read()).decode(),
-               "branch": "main"}
-          if sha:
-              d["sha"] = sha
-          print(json.dumps(d))
-          PYEOF
-          gh api -X PUT "repos/${{ github.repository }}/contents/submission_parts_debug.log" --input /tmp/put.json || true
+            ls -la submission_parts 2>/dev/null || true
+            git log --oneline -5 2>/dev/null || true
+          } > debug-trace.log 2>&1 || true
+
+      - name: Upload debug trace
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-trace-${{ github.run_id }}
+          path: debug-trace.log
+          if-no-files-found: ignore
