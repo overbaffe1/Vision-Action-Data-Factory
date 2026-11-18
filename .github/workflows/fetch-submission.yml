@@ -9,7 +9,7 @@ on:
         default: 'https://gv02-dsworks-obs01.obs.ru-moscow-1.hc.sbercloud.ru/champ_inference/d7d597aa-c30a-4162-ab4c-362f2abb6b85?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=APBKZPWWNZBCUG5K3N0F%2F20261018%2Fru-moscow-1%2Fs3%2Faws4_request&X-Amz-Date=20261018T174033Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dsubmission.zip&X-Amz-Signature=fbfdfbc9e1e5c0fe86ee8d38e45a46de14d33af92b34231f677e783cfb57c7bd'
   push:
     branches:
-      - arena/8c48778b-vision-action-data-factory
+      - main
     paths:
       - '.github/workflows/fetch-submission.yml'
 
